@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { 
   Play, 
@@ -46,7 +46,7 @@ export const TransportControls: React.FC = () => {
     savePreset,
     randomizeParameters
   } = useKickGenerator();
-  
+
   const { 
     isPresetMenuOpen, 
     setPresetMenuOpen,
@@ -63,14 +63,26 @@ export const TransportControls: React.FC = () => {
       setNewPresetName("");
     }
   };
-  
+
   const handleKeyChange = (value: string) => {
     const key = availableKeys.find(k => k.value === value);
     if (key) {
       setKey(key);
     }
   };
-  
+
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && e.target === document.body) {
+        e.preventDefault();
+        togglePlayback();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, [togglePlayback]);
+
   return (
     <div className="bg-background-surface1 rounded-lg p-4 shadow-lg">
       <div className="flex justify-between items-center mb-4">
@@ -107,7 +119,7 @@ export const TransportControls: React.FC = () => {
           </div>
         </div>
       </div>
-      
+
       <div className="flex flex-wrap items-center gap-3">
         <Button
           variant="ghost"
@@ -117,7 +129,7 @@ export const TransportControls: React.FC = () => {
         >
           <Play size={32} />
         </Button>
-        
+
         <Button
           variant="ghost"
           size="icon"
@@ -126,7 +138,7 @@ export const TransportControls: React.FC = () => {
         >
           <Square size={24} />
         </Button>
-        
+
         <div className="flex-grow flex flex-col justify-center">
           <div className="flex items-center justify-between mb-1">
             <span className="text-xs text-gray-400">00:00</span>
@@ -139,7 +151,7 @@ export const TransportControls: React.FC = () => {
             ></div>
           </div>
         </div>
-        
+
         <Button
           variant="secondary"
           size="sm"
@@ -150,7 +162,7 @@ export const TransportControls: React.FC = () => {
           Download WAV
         </Button>
       </div>
-      
+
       <div className="flex space-x-3 mt-4">
         <Button
           variant="outline"
@@ -161,7 +173,7 @@ export const TransportControls: React.FC = () => {
           <Plus className="h-4 w-4 mr-1" />
           New
         </Button>
-        
+
         <Button
           variant="default"
           size="sm"
@@ -171,7 +183,7 @@ export const TransportControls: React.FC = () => {
           <Dices className="h-4 w-4 mr-1" />
           Randomize
         </Button>
-        
+
         <DropdownMenu open={isPresetMenuOpen} onOpenChange={setPresetMenuOpen}>
           <DropdownMenuTrigger asChild>
             <Button
@@ -197,7 +209,7 @@ export const TransportControls: React.FC = () => {
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-        
+
         <Dialog open={isSaveModalOpen} onOpenChange={setSaveModalOpen}>
           <DialogTrigger asChild>
             <Button
