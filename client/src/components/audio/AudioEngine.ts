@@ -242,21 +242,21 @@ class AudioEngine {
   private applyGatedDistortion(leftChannel: Float32Array, rightChannel: Float32Array, amount: number, drive: number) {
     const length = leftChannel.length;
     
-    // Create and apply distortion
+    // Create extreme distortion for that raw, aggressive tone
     for (let i = 0; i < length; i++) {
-      // Apply distortion with more gain
-      const driveAmount = 1 + drive * 3;
+      // Extreme overdrive - way more aggressive than other types
+      const driveAmount = 1 + drive * 10; // Super aggressive
       leftChannel[i] *= driveAmount;
       rightChannel[i] *= driveAmount;
       
-      // Hard clipping for that gated distortion sound
-      const threshold = 0.7;
+      // Ultra-hard clipping for that signature raw sound
+      const threshold = 0.4; // Much lower threshold for extreme squaring of waveform
       leftChannel[i] = this.hardClip(leftChannel[i], threshold);
       rightChannel[i] = this.hardClip(rightChannel[i], threshold);
     }
     
-    // Apply gating effect (typical for rawstyle kicks)
-    const gateFreq = 32; // 32Hz gate frequency
+    // Apply very pronounced gating - extreme on/off pattern unlike any other kick type
+    const gateFreq = 40; // Faster gating frequency for more obvious effect
     const gateInterval = Math.floor(this.sampleRate / gateFreq);
     
     for (let i = 0; i < length; i++) {
@@ -264,182 +264,362 @@ class AudioEngine {
       const gatePosition = i % gateInterval;
       const gateRatio = gatePosition / gateInterval;
       
-      // Create gating pattern (on for 80%, off for 20%)
+      // Create radical gating pattern - very obvious on/off
       let gateFactor;
-      if (gateRatio < 0.8) {
-        gateFactor = 1.0; // On
+      if (gateRatio < 0.65) { // Less on-time than other implementations
+        gateFactor = 1.0; // Full on
       } else {
-        gateFactor = 0.2; // Reduced but not silent
+        gateFactor = 0.05; // Almost completely off - much more extreme
       }
       
-      // Apply gating with dry/wet mix
-      leftChannel[i] = leftChannel[i] * gateFactor * amount + leftChannel[i] * (1 - amount);
-      rightChannel[i] = rightChannel[i] * gateFactor * amount + rightChannel[i] * (1 - amount);
+      // Create hard transitions between on and off for that machine-gun effect
+      leftChannel[i] *= gateFactor;
+      rightChannel[i] *= gateFactor;
+    }
+    
+    // Add harsh, gritty noise during the on periods
+    for (let i = 0; i < length; i++) {
+      // Only add noise during "on" portions of the gate
+      const gatePosition = i % gateInterval;
+      const gateRatio = gatePosition / gateInterval;
+      
+      if (gateRatio < 0.65) {
+        // Add noise modulation - completely unique to the raw style
+        const noise = (Math.random() * 2 - 1) * 0.2 * drive;
+        leftChannel[i] += noise;
+        rightChannel[i] += noise;
+      }
+    }
+    
+    // Add aggressive mid-range boost - characteristic of raw kicks
+    for (let i = 0; i < length; i++) {
+      // Apply mid-range boost with slight distortion - signature of raw kicks
+      if (i > 0) {
+        const midBoost = (leftChannel[i] - leftChannel[i-1]) * 0.5 * drive;
+        leftChannel[i] += midBoost;
+        rightChannel[i] += midBoost;
+      }
+    }
+    
+    // Apply extremely hard limiting at the end for that compressed, in-your-face sound
+    for (let i = 0; i < length; i++) {
+      leftChannel[i] = this.hardClip(leftChannel[i], 0.95);
+      rightChannel[i] = this.hardClip(rightChannel[i], 0.95);
     }
   }
 
   private applyEuphoricDistortion(leftChannel: Float32Array, rightChannel: Float32Array, amount: number, drive: number) {
     const length = leftChannel.length;
     
-    // Create soft, warm distortion characteristic of euphoric hardstyle
+    // Create the silky-smooth melodic euphoric character - very different from raw/zaag
     for (let i = 0; i < length; i++) {
-      // Moderate pre-gain for warmth
-      const driveAmount = 1 + drive * 2;
+      // Extremely gentle drive - much less aggressive than others
+      const driveAmount = 1 + drive * 1.2; // Much gentler than other types
       leftChannel[i] *= driveAmount;
       rightChannel[i] *= driveAmount;
-      
-      // Soft clipping for tube-like warmth
-      leftChannel[i] = this.softClip(leftChannel[i]);
-      rightChannel[i] = this.softClip(rightChannel[i]);
-      
-      // Add subtle second harmonic for warmth
-      leftChannel[i] += 0.1 * drive * leftChannel[i] * leftChannel[i];
-      rightChannel[i] += 0.1 * drive * rightChannel[i] * rightChannel[i];
     }
     
-    // Apply some high frequency enhancement for "air"
-    for (let i = 1; i < length; i++) {
-      // Simple high-frequency enhancement
-      const highFreq = leftChannel[i] - leftChannel[i-1];
-      leftChannel[i] += highFreq * 0.2 * drive;
-      
-      const highFreqR = rightChannel[i] - rightChannel[i-1];
-      rightChannel[i] += highFreqR * 0.2 * drive;
-    }
-    
-    // Final mix with dry signal for control
+    // Apply very delicate, musical tube saturation - no harsh clipping
     for (let i = 0; i < length; i++) {
-      // Apply the effect amount (dry/wet mix)
-      const origL = leftChannel[i] / (1 + drive * 2); // Recover original
-      const origR = rightChannel[i] / (1 + drive * 2);
+      // Use subtle, musical saturation - very different from hard clipping in raw/zaag
+      leftChannel[i] = Math.tanh(leftChannel[i] * 0.7); // Much gentler tanh curve
+      rightChannel[i] = Math.tanh(rightChannel[i] * 0.7);
+    }
+    
+    // Add characteristic chorus effect - completely unique to euphoric
+    let chorusPhase = 0;
+    const chorusRate = 0.5; // Very slow modulation
+    const chorusDepth = 0.3 * drive;
+    
+    // Create chorus delay buffer (completely different from other types)
+    const chorusDelayLen = Math.floor(this.sampleRate * 0.015); // 15ms delay
+    const chorusBuffer = new Float32Array(chorusDelayLen);
+    
+    // Fill buffer with initial content
+    for (let i = 0; i < chorusDelayLen && i < length; i++) {
+      chorusBuffer[i] = leftChannel[i];
+    }
+    
+    // Apply chorus effect (completely unique to euphoric type)
+    for (let i = chorusDelayLen; i < length; i++) {
+      chorusPhase += 2 * Math.PI * chorusRate / this.sampleRate;
+      if (chorusPhase > 2 * Math.PI) chorusPhase -= 2 * Math.PI;
       
-      leftChannel[i] = leftChannel[i] * amount + origL * (1 - amount);
-      rightChannel[i] = rightChannel[i] * amount + origR * (1 - amount);
+      const modulation = Math.sin(chorusPhase) * chorusDepth;
+      
+      // Calculate chorus delay (variable)
+      const delayOffset = Math.floor(modulation * chorusDelayLen * 0.5);
+      const delayPos = (i - chorusDelayLen + delayOffset) % length;
+      
+      // Add chorus - creates that wide, euphoric stereo image
+      leftChannel[i] += chorusBuffer[i % chorusDelayLen] * 0.5;
+      rightChannel[i] += chorusBuffer[(i + delayOffset) % chorusDelayLen] * 0.5;
+      
+      // Update chorus buffer
+      chorusBuffer[i % chorusDelayLen] = leftChannel[i];
+    }
+    
+    // Euphoric kicks have characteristic bright high end - very different from others
+    for (let i = 2; i < length; i++) {
+      // Add bright "air" frequencies - distinctive euphoric character
+      const brightener = (leftChannel[i] - leftChannel[i-1]) * 0.4 * drive; 
+      leftChannel[i] += brightener;
+      rightChannel[i] += brightener;
+    }
+    
+    // Add a melodic tone - unique to euphoric style
+    let tonePhase = 0;
+    const toneFreq = 880; // Higher pitched distinctive tone
+    
+    for (let i = 0; i < Math.min(length, this.sampleRate * 0.15); i++) { // Only in first 150ms
+      // Generate high tone that fades out
+      tonePhase += 2 * Math.PI * toneFreq / this.sampleRate;
+      if (tonePhase > 2 * Math.PI) tonePhase -= 2 * Math.PI;
+      
+      // Create fade out envelope
+      const fadeOut = 1 - (i / (this.sampleRate * 0.15));
+      
+      // Add the tone - unique euphoric character
+      const toneSample = Math.sin(tonePhase) * 0.1 * fadeOut * drive;
+      leftChannel[i] += toneSample;
+      rightChannel[i] += toneSample;
+    }
+    
+    // Apply compression with soft limiting - very different from the hard limited raw style
+    for (let i = 0; i < length; i++) {
+      // Gentle limiting to maintain clean, musical character
+      leftChannel[i] = Math.tanh(leftChannel[i] * 0.8);
+      rightChannel[i] = Math.tanh(rightChannel[i] * 0.8);
     }
   }
 
   private applyZaagDistortion(leftChannel: Float32Array, rightChannel: Float32Array, amount: number, drive: number) {
     const length = leftChannel.length;
     
-    // Apply heavy pre-gain for that aggressive Zaag sound
+    // ZAAG has a COMPLETELY different character than other kick types
+    // It uses EXTREME saw-wave style distortion with a very distinctive character
+    
+    // First, apply extreme drive - WAY stronger than the euphoric style
     for (let i = 0; i < length; i++) {
-      leftChannel[i] *= 1 + drive * 5;
-      rightChannel[i] *= 1 + drive * 5;
+      leftChannel[i] *= 1 + drive * 15; // Extremely aggressive - nothing like the others
+      rightChannel[i] *= 1 + drive * 15;
     }
     
-    // Create asymmetrical distortion for the saw-like zaag character
+    // Apply distinctive saw-tooth wave folding - ZAAG signature sound
     for (let i = 0; i < length; i++) {
-      // Apply asymmetrical clipping
-      leftChannel[i] = this.asymClip(leftChannel[i]);
-      rightChannel[i] = this.asymClip(rightChannel[i]);
+      // Heavy foldback distortion - absolutely unique to ZAAG distortion
+      const threshold = 0.3; // Very aggressive folding
+      
+      // Apply radical waveshaping
+      while (Math.abs(leftChannel[i]) > threshold) {
+        if (leftChannel[i] > threshold) {
+          leftChannel[i] = 2 * threshold - leftChannel[i];
+        } else if (leftChannel[i] < -threshold) {
+          leftChannel[i] = -2 * threshold - leftChannel[i];
+        }
+      }
+      
+      while (Math.abs(rightChannel[i]) > threshold) {
+        if (rightChannel[i] > threshold) {
+          rightChannel[i] = 2 * threshold - rightChannel[i];
+        } else if (rightChannel[i] < -threshold) {
+          rightChannel[i] = -2 * threshold - rightChannel[i];
+        }
+      }
     }
     
-    // Add square wave overtones (key characteristic of Zaag sound)
-    let phase = 0;
-    const squareFreq = 180; // Typical high-mid frequency for Zaag
+    // Add multiple square wave overtones for that distinctive ZAAG sound
+    let phase1 = 0, phase2 = 0;
+    const squareFreq1 = 250; // Higher than other distortion types
+    const squareFreq2 = 420; // Second harmonic - unique to zaag
     
     for (let i = 0; i < length; i++) {
-      // Generate square wave
-      phase += 2 * Math.PI * squareFreq / this.sampleRate;
-      if (phase > 2 * Math.PI) phase -= 2 * Math.PI;
+      // First saw component
+      phase1 += 2 * Math.PI * squareFreq1 / this.sampleRate;
+      if (phase1 > 2 * Math.PI) phase1 -= 2 * Math.PI;
       
-      // Create square wave (-1 or 1)
-      const square = phase < Math.PI ? 1 : -1;
+      // Second saw component - unique layering approach for zaag
+      phase2 += 2 * Math.PI * squareFreq2 / this.sampleRate;
+      if (phase2 > 2 * Math.PI) phase2 -= 2 * Math.PI;
       
-      // Add square wave overtones
-      const squareMix = 0.15 * drive; // Amount of square wave to mix in
-      leftChannel[i] += square * squareMix;
-      rightChannel[i] += square * squareMix;
+      // Create saw waves instead of square for ZAAG character
+      const saw1 = 2 * (phase1 / (2 * Math.PI)) - 1;
+      const saw2 = 2 * (phase2 / (2 * Math.PI)) - 1;
+      
+      // Mix in these extremely distinctive overtones - zaag signature
+      const sawMix = 0.4 * drive; // MUCH stronger than other types
+      leftChannel[i] += (saw1 * 0.6 + saw2 * 0.4) * sawMix;
+      rightChannel[i] += (saw1 * 0.6 + saw2 * 0.4) * sawMix;
     }
     
-    // Final mix and limiting
+    // Add bitcrushing effect - absolutely distinctive ZAAG character
+    if (drive > 0.4) {
+      // Reduce bit-depth for that digital zaagy sound
+      const bitReduction = Math.pow(2, 6); // ~6-bit sound!
+      
+      for (let i = 0; i < length; i++) {
+        // Aggressive bitcrushing unique to zaag
+        leftChannel[i] = Math.round(leftChannel[i] * bitReduction) / bitReduction;
+        rightChannel[i] = Math.round(rightChannel[i] * bitReduction) / bitReduction;
+      }
+    }
+    
+    // Add comb filtering for that classic zaag resonant sound
+    const combDelay = Math.floor(this.sampleRate / 1000); // 1ms delay
+    const combBuffer = new Float32Array(combDelay);
+    
+    for (let i = combDelay; i < length; i++) {
+      // Unique resonant comb filtering - nothing like the other types
+      const combFeedback = 0.7 * drive;
+      const idx = i % combDelay;
+      const delayed = combBuffer[idx];
+      
+      // Add comb filtering
+      leftChannel[i] = leftChannel[i] + delayed * combFeedback;
+      combBuffer[idx] = leftChannel[i];
+    }
+    
+    // Final extreme distortion and clipping
     for (let i = 0; i < length; i++) {
-      // Apply wet/dry mix
-      const origL = leftChannel[i] / (1 + drive * 5); // Get original
-      const origR = rightChannel[i] / (1 + drive * 5);
-      
-      leftChannel[i] = leftChannel[i] * amount + origL * (1 - amount);
-      rightChannel[i] = rightChannel[i] * amount + origR * (1 - amount);
-      
-      // Final hard clipping for that aggressive edge
-      leftChannel[i] = this.hardClip(leftChannel[i], 0.95);
-      rightChannel[i] = this.hardClip(rightChannel[i], 0.95);
+      // Ultra-hard digital clipping - very different from other types
+      leftChannel[i] = this.hardClip(leftChannel[i], 0.8);
+      rightChannel[i] = this.hardClip(rightChannel[i], 0.8);
     }
   }
 
   private applyReverseDistortion(leftChannel: Float32Array, rightChannel: Float32Array, amount: number, drive: number) {
     const length = leftChannel.length;
     
-    // Create envelope follower to detect signal amplitude
+    // CRITICAL: REVERSE BASS IS 100% DIFFERENT FROM OTHER KICK TYPES
+    // It's defined by an inverted envelope shape where the tail gets LOUDER instead of quieter
+    
+    // Create amplitude envelope from the original signal
     const envelope = new Float32Array(length);
     for (let i = 0; i < length; i++) {
       envelope[i] = Math.abs(leftChannel[i]);
     }
     
-    // Smooth the envelope
-    this.smoothArray(envelope, 50);
+    // Smooth the envelope for a musical curve
+    this.smoothArray(envelope, 80);
     
-    // Create reversed envelope (key characteristic of reverse bass)
+    // Create completely inverted envelope - THE defining feature of reverse bass
     const reverseEnvelope = new Float32Array(length);
     for (let i = 0; i < length; i++) {
-      reverseEnvelope[i] = 1 - envelope[i]; // Inverse of original envelope
+      // Create more dramatic reverse envelope curve for more obvious effect
+      const normalizedPos = i / length;
+      
+      // DRAMATIC reverse curve (power curve for extreme effect)
+      reverseEnvelope[i] = Math.pow(normalizedPos, 1.2) * (1 - envelope[i]) + 0.2; 
     }
     
-    // Create LFO for classic reverse bass pumping effect
-    let lfoPhase = 0;
-    const lfoFreq = 4 + (drive * 4); // 4-8 Hz typical for reverse bass
+    // Apply heavy pre-amplification - different from all other types
+    for (let i = 0; i < length; i++) {
+      // Start with tamer amplification than raw/zaag
+      leftChannel[i] *= 1 + drive * 1.5;
+      rightChannel[i] *= 1 + drive * 1.5;
+    }
     
-    // Apply the reverse effect
+    // Create slow LFO for dramatic reverse bass wobble - EXTREMELY distinctive
+    let lfoPhase = 0;
+    const lfoFreq = 2.5 + (drive * 6); // Very slow, obvious wobble (2.5-8.5 Hz)
+    
+    // Apply the dramatic reverse modulation
     for (let i = 0; i < length; i++) {
       // Update LFO
       lfoPhase += 2 * Math.PI * lfoFreq / this.sampleRate;
       if (lfoPhase > 2 * Math.PI) lfoPhase -= 2 * Math.PI;
       
-      // Calculate LFO value (0-1)
-      const lfoValue = 0.5 * (1 + Math.sin(lfoPhase));
+      // Calculate dramatic LFO value with shaped curve for more obvious effect
+      const rawLFO = Math.sin(lfoPhase);
+      // Reshape LFO curve for more sudden transitions - critical for reverse bass character
+      const shapedLFO = Math.pow(Math.abs(rawLFO), 0.7) * Math.sign(rawLFO);
+      const lfoValue = 0.5 * (1 + shapedLFO);
       
-      // Combine reverse envelope with LFO for classic pumping effect
-      const effectAmount = reverseEnvelope[i] * (0.7 + 0.3 * lfoValue);
+      // Apply EXTREME reverse envelope modulation - way more dramatic than other kick types
+      const modulationFactor = 5 + drive * 15; // Much stronger modulation 
+      const modulatedGain = 1 + (reverseEnvelope[i] * modulationFactor * lfoValue);
       
-      // Apply gain modulation based on reverse envelope
-      const gainFactor = 1 + (drive * 2 * effectAmount);
-      leftChannel[i] *= gainFactor;
-      rightChannel[i] *= gainFactor;
+      // Apply dramatic gain wobble
+      leftChannel[i] *= modulatedGain;
+      rightChannel[i] *= modulatedGain;
+    }
+    
+    // Add MASSIVE throbbing sub bass - much heavier than other kick types
+    let subPhase1 = 0, subPhase2 = 0;
+    const subFreq1 = 40; // Very low fundamental
+    const subFreq2 = 80; // First harmonic for texture
+    
+    for (let i = 0; i < length; i++) {
+      // First sub oscillator
+      subPhase1 += 2 * Math.PI * subFreq1 / this.sampleRate;
+      if (subPhase1 > 2 * Math.PI) subPhase1 -= 2 * Math.PI;
       
-      // Apply soft clipping for that smooth reverse bass sound
+      // Second sub oscillator for complex texture
+      subPhase2 += 2 * Math.PI * subFreq2 / this.sampleRate;
+      if (subPhase2 > 2 * Math.PI) subPhase2 -= 2 * Math.PI;
+      
+      // Calculate sub shape with slight saturation for richness
+      const subValue1 = Math.tanh(Math.sin(subPhase1) * 1.2);
+      const subValue2 = Math.sin(subPhase2) * 0.3;
+      
+      // Create composite sub signal modulated by reverse envelope
+      // MUCH stronger sub than in other kick types
+      const subMix = (subValue1 + subValue2) * 0.5 * drive * reverseEnvelope[i];
+      
+      // Add massive sub bass to signal
+      leftChannel[i] += subMix;
+      rightChannel[i] += subMix;
+    }
+    
+    // Add resonant filter sweep - UNIQUE to reverse bass
+    let filterPhase = 0;
+    const filterFreq = lfoFreq * 2; // Sync with LFO but faster
+    const resonanceAmount = 0.85 * drive; // Heavy resonance
+    
+    // Create filter buffer for resonance
+    const filterBufferLength = Math.floor(this.sampleRate * 0.025); // 25ms
+    const filterBuffer = new Float32Array(filterBufferLength);
+    
+    // Apply resonant filter sweep
+    for (let i = filterBufferLength; i < length; i++) {
+      // Update filter modulation
+      filterPhase += 2 * Math.PI * filterFreq / this.sampleRate;
+      if (filterPhase > 2 * Math.PI) filterPhase -= 2 * Math.PI;
+      
+      // Filter frequency follows reverse envelope
+      const filterFactor = 0.2 + 0.7 * reverseEnvelope[i] * (0.6 + 0.4 * Math.sin(filterPhase));
+      
+      // Apply resonant filter - classic reverse bass sound
+      const bufferIdx = i % filterBufferLength;
+      const resonance = filterBuffer[bufferIdx] * resonanceAmount * reverseEnvelope[i];
+      
+      // Add resonance to signal
+      leftChannel[i] += resonance;
+      
+      // Update filter buffer
+      filterBuffer[bufferIdx] = leftChannel[i];
+    }
+    
+    // Apply final limiting but with asymmetric saturation
+    for (let i = 0; i < length; i++) {
+      // Asymmetric saturation for distinctive sound
+      if (leftChannel[i] > 0) {
+        leftChannel[i] = 1 - Math.exp(-leftChannel[i]);
+      } else {
+        leftChannel[i] = -Math.tanh(Math.abs(leftChannel[i]));
+      }
+      
+      if (rightChannel[i] > 0) {
+        rightChannel[i] = 1 - Math.exp(-rightChannel[i]);
+      } else {
+        rightChannel[i] = -Math.tanh(Math.abs(rightChannel[i]));
+      }
+    }
+    
+    // Final limiting for safety
+    for (let i = 0; i < length; i++) {
       leftChannel[i] = this.softClip(leftChannel[i]);
       rightChannel[i] = this.softClip(rightChannel[i]);
-    }
-    
-    // Add sub bass enhancement
-    let subPhase = 0;
-    const subFreq = 50; // 50Hz sub enhancement
-    
-    for (let i = 0; i < length; i++) {
-      // Generate sub bass oscillator
-      subPhase += 2 * Math.PI * subFreq / this.sampleRate;
-      if (subPhase > 2 * Math.PI) subPhase -= 2 * Math.PI;
-      
-      // Calculate sub bass value
-      const subValue = Math.sin(subPhase) * 0.2 * drive * reverseEnvelope[i];
-      
-      // Add sub bass to signal
-      leftChannel[i] += subValue;
-      rightChannel[i] += subValue;
-    }
-    
-    // Final mix and limiting
-    for (let i = 0; i < length; i++) {
-      // Apply wet/dry mix
-      const origL = leftChannel[i] / (1 + drive * 2 * reverseEnvelope[i]);
-      const origR = rightChannel[i] / (1 + drive * 2 * reverseEnvelope[i]);
-      
-      leftChannel[i] = leftChannel[i] * amount + origL * (1 - amount);
-      rightChannel[i] = rightChannel[i] * amount + origR * (1 - amount);
-      
-      // Final limiting for safety
-      leftChannel[i] = Math.tanh(leftChannel[i]);
-      rightChannel[i] = Math.tanh(rightChannel[i]);
     }
   }
 
