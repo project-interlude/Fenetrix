@@ -880,24 +880,6 @@ class AudioEngine {
         this.visualizationCallback(waveformData, fftData, rmsDb, peakDb);
       }
       
-      // Calculate RMS
-      let sumSquares = 0;
-      let peak = 0;
-      for (let i = 0; i < this.waveformData.length; i++) {
-        sumSquares += this.waveformData[i] * this.waveformData[i];
-        peak = Math.max(peak, Math.abs(this.waveformData[i]));
-      }
-      const rms = Math.sqrt(sumSquares / this.waveformData.length);
-      
-      // Convert to dB
-      const rmsDb = 20 * Math.log10(rms);
-      const peakDb = 20 * Math.log10(peak);
-      
-      // Call the visualization callback
-      if (this.visualizationCallback) {
-        this.visualizationCallback(this.waveformData, this.fftData, rmsDb, peakDb);
-      }
-      
       // Continue the loop
       this.requestId = requestAnimationFrame(updateVisualization);
     };
