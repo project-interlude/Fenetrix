@@ -10,7 +10,7 @@ export const NavMenu: React.FC = () => {
     <div className="flex justify-end items-center space-x-4 px-6 py-2 bg-black/50 backdrop-blur-md">
       <div className="flex mr-auto">
         <span className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-blue-400">
-          Hardstyle Kick Generator
+          HKG // by Wunderkind
         </span>
       </div>
 
