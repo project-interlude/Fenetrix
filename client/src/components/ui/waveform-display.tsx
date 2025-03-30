@@ -15,6 +15,22 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
   className = '' 
 }) => {
   const { visualizationType, setVisualizationType } = useUI();
+  const [localWaveformData, setLocalWaveformData] = useState<Float32Array | undefined>(waveformData);
+  const [localFftData, setLocalFftData] = useState<Float32Array | undefined>(fftData);
+
+  useEffect(() => {
+    setLocalWaveformData(waveformData);
+    setLocalFftData(fftData);
+  }, [waveformData, fftData]);
+
+  useEffect(() => {
+    const updateInterval = setInterval(() => {
+      setLocalWaveformData(waveformData);
+      setLocalFftData(fftData);
+    }, 1000 / 60); // 60 FPS update rate
+
+    return () => clearInterval(updateInterval);
+  }, [waveformData, fftData]);
   
   const handleTabChange = (value: string) => {
     setVisualizationType(value as "waveform" | "spectrum");
@@ -41,7 +57,7 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         <div className="waveform-container mb-4">
           <TabsContent value="waveform" className="mt-0">
             <Visualizer
-              waveformData={waveformData}
+              waveformData={localWaveformData}
               type="waveform"
               className="w-full h-[160px]"
             />
@@ -49,7 +65,7 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
           
           <TabsContent value="spectrum" className="mt-0">
             <Visualizer
-              fftData={fftData}
+              fftData={localFftData}
               type="spectrum"
               className="w-full h-[160px]"
             />

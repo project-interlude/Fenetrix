@@ -842,7 +842,7 @@ class AudioEngine {
     }
     
     const updateVisualization = () => {
-      if (!this.isPlaying || !this.analyserNode || !this.audioContext || !this.kickBuffer) {
+      if (!this.analyserNode || !this.audioContext) {
         return;
       }
       
