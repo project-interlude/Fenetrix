@@ -13,7 +13,7 @@ export const NavMenu: React.FC = () => {
           Hardstyle Kick Generator
         </span>
       </div>
-      
+
       <Link href="/"
         className={cn(
           "flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors",
@@ -25,7 +25,7 @@ export const NavMenu: React.FC = () => {
         <Home className="h-4 w-4 mr-2" />
         <span>Home</span>
       </Link>
-      
+
       <a 
         href="https://jessenth.com" 
         target="_blank" 

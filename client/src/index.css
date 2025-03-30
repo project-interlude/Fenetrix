@@ -55,6 +55,21 @@
   background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, rgba(20,20,20,0.8) 100%);
 }
 
+/* Navigation menu responsive styles */
+.nav-menu {
+  @apply flex flex-wrap gap-2 items-center justify-start;
+}
+
+.nav-menu-item {
+  @apply flex-shrink-0;
+}
+
+@media (max-width: 640px) {
+  .nav-menu {
+    @apply justify-center;
+  }
+}
+
 .slider-neon {
   @apply appearance-none w-full h-2 bg-black rounded-none overflow-hidden;
   box-shadow: 0 0 5px #00ff41, 0 0 10px #00ff41;
