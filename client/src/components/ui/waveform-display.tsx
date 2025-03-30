@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Visualizer from '../audio/Visualizer';
 import { useUI } from '@/lib/context';
@@ -15,27 +15,11 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
   className = '' 
 }) => {
   const { visualizationType, setVisualizationType } = useUI();
-  const [localWaveformData, setLocalWaveformData] = useState<Float32Array | undefined>(waveformData);
-  const [localFftData, setLocalFftData] = useState<Float32Array | undefined>(fftData);
 
-  useEffect(() => {
-    setLocalWaveformData(waveformData);
-    setLocalFftData(fftData);
-  }, [waveformData, fftData]);
-
-  useEffect(() => {
-    const updateInterval = setInterval(() => {
-      setLocalWaveformData(waveformData);
-      setLocalFftData(fftData);
-    }, 1000 / 60); // 60 FPS update rate
-
-    return () => clearInterval(updateInterval);
-  }, [waveformData, fftData]);
-  
   const handleTabChange = (value: string) => {
     setVisualizationType(value as "waveform" | "spectrum");
   };
-  
+
   return (
     <div className={`bg-background-surface1 rounded-lg p-4 shadow-lg ${className}`}>
       <Tabs value={visualizationType} onValueChange={handleTabChange}>
@@ -53,32 +37,25 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
             Spectrum
           </TabsTrigger>
         </TabsList>
-        
+
         <div className="waveform-container mb-4">
           <TabsContent value="waveform" className="mt-0">
             <Visualizer
-              waveformData={localWaveformData}
+              waveformData={waveformData}
               type="waveform"
               className="w-full h-[160px]"
             />
           </TabsContent>
-          
+
           <TabsContent value="spectrum" className="mt-0">
             <Visualizer
-              fftData={localFftData}
+              fftData={fftData}
               type="spectrum"
               className="w-full h-[160px]"
             />
           </TabsContent>
         </div>
       </Tabs>
-      
-      <div className="flex justify-between items-center text-sm text-gray-400">
-        <span>0ms</span>
-        <span>200ms</span>
-        <span>400ms</span>
-        <span>600ms</span>
-      </div>
     </div>
   );
 };
