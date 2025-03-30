@@ -847,7 +847,7 @@ class AudioEngine {
       }
       
       // Update progress
-      if (this.progressCallback && this.kickBuffer) {
+      if (this.progressCallback && this.kickBuffer && this.isPlaying) {
         const currentTime = this.audioContext.currentTime - this.startTime;
         const duration = this.kickBuffer.duration;
         const progress = Math.min(currentTime / duration, 1);
@@ -855,10 +855,30 @@ class AudioEngine {
       }
       
       // Get waveform data
-      this.analyserNode.getFloatTimeDomainData(this.waveformData);
+      const waveformData = new Float32Array(this.analyserNode.frequencyBinCount);
+      this.analyserNode.getFloatTimeDomainData(waveformData);
       
       // Get FFT data
-      this.analyserNode.getFloatFrequencyData(this.fftData);
+      const fftData = new Float32Array(this.analyserNode.frequencyBinCount);
+      this.analyserNode.getFloatFrequencyData(fftData);
+      
+      // Calculate RMS and peak
+      let sumSquares = 0;
+      let peak = 0;
+      for (let i = 0; i < waveformData.length; i++) {
+        sumSquares += waveformData[i] * waveformData[i];
+        peak = Math.max(peak, Math.abs(waveformData[i]));
+      }
+      const rms = Math.sqrt(sumSquares / waveformData.length);
+      
+      // Convert to dB
+      const rmsDb = 20 * Math.log10(Math.max(rms, 1e-10));
+      const peakDb = 20 * Math.log10(Math.max(peak, 1e-10));
+      
+      // Call the visualization callback
+      if (this.visualizationCallback) {
+        this.visualizationCallback(waveformData, fftData, rmsDb, peakDb);
+      }
       
       // Calculate RMS
       let sumSquares = 0;
