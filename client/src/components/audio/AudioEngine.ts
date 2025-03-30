@@ -105,18 +105,34 @@ class AudioEngine {
     const sustainLevel = adsr.sustain / 100;
     const numSamples = leftChannel.length;
     
-    // Pitch envelope parameters
+    // Pitch envelope parameters - more extreme for hardstyle kicks
     const baseFreq = key.frequency;
-    const startFreq = baseFreq * (pitch.start / 10); // Higher start value for more dramatic pitch drop
+    // Start much higher for a more dramatic pitch drop
+    const startFreq = baseFreq * Math.max(3, pitch.start / 5); 
     const pitchEnvTime = pitch.time / 1000; // Convert to seconds
     const pitchEnvSamples = Math.floor(pitchEnvTime * sampleRate);
     
-    // Click oscillator parameters
+    // Improved non-linear pitch curve for more professional sound
+    // Precompute pitch curve for efficiency and better control
+    const pitchCurve = new Float32Array(numSamples);
+    for (let i = 0; i < numSamples; i++) {
+      if (i < pitchEnvSamples) {
+        // Non-linear curve that starts fast and slows down - sounds more natural
+        const pitchProgress = Math.pow(i / pitchEnvSamples, 0.5); // Power curve for more aggressive initial drop
+        pitchCurve[i] = startFreq - (startFreq - baseFreq) * pitchProgress;
+      } else {
+        pitchCurve[i] = baseFreq;
+      }
+    }
+    
+    // Click oscillator parameters - critically important for hardstyle kick punch
     const clickAmount = click.enabled ? click.amount / 100 : 0;
     const clickTone = click.tone / 100; // Controls the frequency of the click
-    const clickFreq = 1000 + (clickTone * 4000); // 1kHz to 5kHz
     
-    // Sub oscillator
+    // Use a mix of sine and noise for more realistic click
+    const clickFreq = 1500 + (clickTone * 5000); // 1.5kHz to 6.5kHz - more range for transient
+    
+    // Sub oscillator - key for that deep sub feeling
     const subAmount = sub.enabled ? sub.amount / 100 : 0;
     
     // Phase accumulation for oscillators
@@ -124,38 +140,41 @@ class AudioEngine {
     let subPhase = 0;
     let clickPhase = 0;
     
+    // White noise buffer for click component
+    const noiseBuffer = new Float32Array(numSamples);
     for (let i = 0; i < numSamples; i++) {
-      // Calculate amplitude envelope
+      noiseBuffer[i] = Math.random() * 2 - 1;
+    }
+    
+    // Improved amplitude envelope with better attack curve for punch
+    for (let i = 0; i < numSamples; i++) {
+      // Calculate amplitude envelope with better curves for punch sound
       let amplitude = 0;
       
       if (i < attackSamples) {
-        // Attack phase
-        amplitude = i / attackSamples;
+        // Attack phase - slightly curved for better punch
+        amplitude = Math.pow(i / attackSamples, 0.8); // Slightly curved attack
       } else if (i < attackSamples + decaySamples) {
-        // Decay phase
+        // Decay phase with improved curve
         const decayProgress = (i - attackSamples) / decaySamples;
-        amplitude = 1.0 - (1.0 - sustainLevel) * decayProgress;
+        amplitude = 1.0 - Math.pow(decayProgress, 0.7) * (1.0 - sustainLevel);
       } else if (i < numSamples - releaseSamples) {
         // Sustain phase
         amplitude = sustainLevel;
       } else {
-        // Release phase
+        // Release phase with improved curve
         const releaseProgress = (i - (numSamples - releaseSamples)) / releaseSamples;
-        amplitude = sustainLevel * (1.0 - releaseProgress);
+        amplitude = sustainLevel * (1.0 - Math.pow(releaseProgress, 1.2));
       }
       
-      // Calculate pitch envelope (frequency at this point in time)
-      let frequency = baseFreq;
-      if (i < pitchEnvSamples) {
-        const pitchProgress = i / pitchEnvSamples;
-        frequency = startFreq - (startFreq - baseFreq) * pitchProgress;
-      }
+      // Use the precomputed pitch curve
+      const frequency = pitchCurve[i];
       
       // Calculate the phase increment based on frequency
       const phaseIncrement = frequency / sampleRate * 2 * Math.PI;
       phase += phaseIncrement;
       
-      // Sub bass (one octave lower)
+      // Sub bass (one octave lower) - more pronounced in hardstyle
       const subPhaseIncrement = (frequency / 2) / sampleRate * 2 * Math.PI;
       subPhase += subPhaseIncrement;
       
@@ -163,24 +182,38 @@ class AudioEngine {
       const clickPhaseIncrement = clickFreq / sampleRate * 2 * Math.PI;
       clickPhase += clickPhaseIncrement;
       
-      // Calculate click envelope (decays quickly)
-      const clickEnvelope = clickAmount * Math.exp(-i / (sampleRate * 0.01)); // 10ms decay
+      // Calculate click envelope (faster decay for sharper transient)
+      // Two-stage click for more realistic attack
+      let clickEnvelope;
+      if (i < sampleRate * 0.005) { // First 5ms - very sharp attack
+        clickEnvelope = clickAmount * Math.exp(-i / (sampleRate * 0.002)); 
+      } else {
+        clickEnvelope = clickAmount * 0.7 * Math.exp(-(i - sampleRate * 0.005) / (sampleRate * 0.01));
+      }
       
-      // Main oscillator (sine wave)
-      const sineValue = Math.sin(phase);
+      // Main oscillator (sine wave with soft clipping for warmth)
+      const sineValue = Math.tanh(1.2 * Math.sin(phase)); // Slight saturation for warmth
       
-      // Sub oscillator (sine wave)
-      const subValue = Math.sin(subPhase) * subAmount;
+      // Sub oscillator (sine wave with enhancement)
+      const subValue = Math.sin(subPhase) * subAmount * (1 + 0.05 * Math.sin(subPhase * 1.5));
       
-      // Click oscillator (can be sine or noise)
-      const clickValue = Math.sin(clickPhase) * clickEnvelope;
+      // Click oscillator (mix of sine and noise for realism)
+      const noisePart = noiseBuffer[i] * 0.3; // 30% noise
+      const sinePart = Math.sin(clickPhase) * 0.7; // 70% sine wave
+      const clickValue = (noisePart + sinePart) * clickEnvelope;
       
-      // Mix all components
-      const sample = (sineValue * 0.7 + subValue * 0.3) * amplitude + clickValue;
+      // Apply slight distortion to the sine component for more character
+      const distortedSine = Math.tanh(sineValue * 1.5) * 0.8;
+      
+      // Mix all components with improved balancing
+      const sample = (distortedSine * 0.6 + subValue * 0.4) * amplitude + clickValue;
+      
+      // Add slight compression/limiting for a more polished sound
+      const compressedSample = Math.tanh(sample * 1.2) * 0.9;
       
       // Apply to both channels
-      leftChannel[i] += sample;
-      rightChannel[i] += sample;
+      leftChannel[i] += compressedSample;
+      rightChannel[i] += compressedSample;
     }
   }
 
@@ -208,72 +241,265 @@ class AudioEngine {
 
   private applyGatedDistortion(leftChannel: Float32Array, rightChannel: Float32Array, amount: number, drive: number) {
     const length = leftChannel.length;
-    const gateFreq = 32; // Gate frequency in Hz
+    
+    // Professional Rawstyle kicks use complex gating patterns
+    // More aggressive and tighter gating for that raw sound
+    const gateFreq = 32 + (drive * 16); // Dynamic gate frequency (32-48Hz)
     const gateInterval = Math.floor(this.sampleRate / gateFreq);
     
+    // First apply hard clipping with pre-gain to generate rich harmonics
     for (let i = 0; i < length; i++) {
-      // Pre-drive to get more harmonics
-      leftChannel[i] *= 1 + drive * 3;
-      rightChannel[i] *= 1 + drive * 3;
+      // Apply heavy pre-drive - essential for raw kicks
+      const driveAmount = 1 + drive * 5; // More extreme drive for rawstyle
+      leftChannel[i] *= driveAmount;
+      rightChannel[i] *= driveAmount;
       
-      // Hard clipping
-      leftChannel[i] = this.hardClip(leftChannel[i], 0.7 + drive * 0.3);
-      rightChannel[i] = this.hardClip(rightChannel[i], 0.7 + drive * 0.3);
-      
-      // Apply gating effect
+      // Hard clipping with variable threshold for more character
+      const threshold = 0.6 + drive * 0.3;
+      leftChannel[i] = this.hardClip(leftChannel[i], threshold);
+      rightChannel[i] = this.hardClip(rightChannel[i], threshold);
+    }
+    
+    // Apply an envelope to the distortion for dynamic character
+    const envelope = new Float32Array(length);
+    for (let i = 0; i < length; i++) {
+      // Create simple amplitude envelope based on the audio
+      envelope[i] = Math.abs(leftChannel[i]);
+    }
+    
+    // Smooth the envelope
+    this.smoothArray(envelope, 50);
+    
+    // Now apply the gating effect with enhanced character
+    for (let i = 0; i < length; i++) {
+      // Calculate gate position for this sample
       const gatePosition = i % gateInterval;
-      const gateFactor = gatePosition < gateInterval * 0.8 ? 1.0 : 0.2;
       
-      leftChannel[i] *= gateFactor * amount + (1 - amount);
-      rightChannel[i] *= gateFactor * amount + (1 - amount);
+      // Professional gating pattern with smoother transition
+      let gateFactor;
+      const gateRatio = gatePosition / gateInterval;
+      
+      if (gateRatio < 0.8) {
+        // On portion - full volume
+        gateFactor = 1.0;
+      } else if (gateRatio < 0.85) {
+        // Smooth transition down
+        gateFactor = 1.0 - (gateRatio - 0.8) * 20; // Ramp down over 5% of cycle
+      } else {
+        // Off portion - lower but not silent
+        gateFactor = 0.1 + (drive * 0.1); // More drive keeps more sound during off period
+      }
+      
+      // Apply the gating with dynamic character based on envelope
+      const effectiveAmount = amount * (0.8 + envelope[i] * 0.2); // More effect on louder parts
+      
+      // Apply gating with a slight emphasis on attack transients
+      leftChannel[i] *= gateFactor * effectiveAmount + (1 - effectiveAmount);
+      rightChannel[i] *= gateFactor * effectiveAmount + (1 - effectiveAmount);
+      
+      // Add slight distortion after gating for more bite
+      leftChannel[i] = this.asymClip(leftChannel[i] * (1 + drive * 0.5));
+      rightChannel[i] = this.asymClip(rightChannel[i] * (1 + drive * 0.5));
     }
   }
 
   private applyEuphoricDistortion(leftChannel: Float32Array, rightChannel: Float32Array, amount: number, drive: number) {
     const length = leftChannel.length;
     
+    // Euphoric hardstyle kicks use warm tube-like saturation with a clean tail
+    // Create an envelope to make distortion musical and dynamic
+    const envelope = new Float32Array(length);
     for (let i = 0; i < length; i++) {
-      // Soft clipping for warm distortion
-      leftChannel[i] = this.softClip(leftChannel[i] * (1 + drive * 2)) * amount + leftChannel[i] * (1 - amount);
-      rightChannel[i] = this.softClip(rightChannel[i] * (1 + drive * 2)) * amount + rightChannel[i] * (1 - amount);
+      envelope[i] = Math.abs(leftChannel[i]);
+    }
+    
+    // Smooth the envelope for natural sound
+    this.smoothArray(envelope, 200); // Smoother envelope for euphoric
+    
+    // Apply tube-like saturation that's stronger on transients
+    for (let i = 0; i < length; i++) {
+      // Calculate drive amount that diminishes over time for clean tail
+      const dynamicDrive = drive * (0.8 + envelope[i] * 3.0);
+      
+      // First stage - soft saturation (tube emulation)
+      let leftSample = leftChannel[i] * (1 + dynamicDrive);
+      let rightSample = rightChannel[i] * (1 + dynamicDrive);
+      
+      // Tube-like soft clipping with asymmetry for richer harmonics
+      leftSample = Math.tanh(leftSample) * 0.6 + Math.tanh(leftSample * 1.5) * 0.4;
+      rightSample = Math.tanh(rightSample) * 0.6 + Math.tanh(rightSample * 1.5) * 0.4;
+      
+      // Add subtle second harmonic for warmth (characteristic of tube amps)
+      leftSample += 0.1 * dynamicDrive * leftSample * leftSample;
+      rightSample += 0.1 * dynamicDrive * rightSample * rightSample;
+      
+      // Apply slight high-frequency enhancement for air
+      if (i > 0) {
+        // Simple high-frequency enhancement
+        const highFreq = leftChannel[i] - leftChannel[i-1];
+        leftSample += highFreq * 0.2 * drive;
+        
+        const highFreqR = rightChannel[i] - rightChannel[i-1];
+        rightSample += highFreqR * 0.2 * drive;
+      }
+      
+      // Mix between dry and processed signal based on amount
+      leftChannel[i] = leftSample * amount + leftChannel[i] * (1 - amount);
+      rightChannel[i] = rightSample * amount + rightChannel[i] * (1 - amount);
+      
+      // Add slight compression for punch and loudness
+      leftChannel[i] = Math.tanh(leftChannel[i] * 1.2) * 0.9;
+      rightChannel[i] = Math.tanh(rightChannel[i] * 1.2) * 0.9;
     }
   }
 
   private applyZaagDistortion(leftChannel: Float32Array, rightChannel: Float32Array, amount: number, drive: number) {
     const length = leftChannel.length;
     
+    // Zaag (saw) distortion is characterized by aggressive, saw-like harmonics
+    // First, apply heavy pre-gain to create rich harmonic content
     for (let i = 0; i < length; i++) {
-      // More aggressive distortion with asymmetric clipping
-      const distortedL = this.asymClip(leftChannel[i] * (1 + drive * 4));
-      const distortedR = this.asymClip(rightChannel[i] * (1 + drive * 4));
+      leftChannel[i] *= 1 + drive * 6; // Very aggressive drive
+      rightChannel[i] *= 1 + drive * 6;
+    }
+    
+    // Apply foldback distortion to create saw-like harmonics
+    for (let i = 0; i < length; i++) {
+      // Fold back when signal exceeds threshold
+      const threshold = 0.6;
       
-      leftChannel[i] = distortedL * amount + leftChannel[i] * (1 - amount);
-      rightChannel[i] = distortedR * amount + rightChannel[i] * (1 - amount);
+      // Apply foldback distortion
+      if (Math.abs(leftChannel[i]) > threshold) {
+        leftChannel[i] = threshold * (leftChannel[i] < 0 ? -1 : 1) - 
+          (leftChannel[i] - threshold * (leftChannel[i] < 0 ? -1 : 1));
+      }
+      
+      if (Math.abs(rightChannel[i]) > threshold) {
+        rightChannel[i] = threshold * (rightChannel[i] < 0 ? -1 : 1) - 
+          (rightChannel[i] - threshold * (rightChannel[i] < 0 ? -1 : 1));
+      }
+    }
+    
+    // Apply asymmetric distortion for more aggressive character
+    for (let i = 0; i < length; i++) {
+      // This creates more odd harmonics which sound more "saw-like"
+      const distortedL = this.asymClip(leftChannel[i] * (1 + drive * 2));
+      const distortedR = this.asymClip(rightChannel[i] * (1 + drive * 2));
+      
+      // Add bit of square-wave harmonics for that zaag character
+      const squareFactorL = Math.sign(leftChannel[i]) * 0.2 * drive;
+      const squareFactorR = Math.sign(rightChannel[i]) * 0.2 * drive;
+      
+      // Mix the distorted signal with the original based on amount
+      leftChannel[i] = (distortedL + squareFactorL) * amount + leftChannel[i] * (1 - amount);
+      rightChannel[i] = (distortedR + squareFactorR) * amount + rightChannel[i] * (1 - amount);
+      
+      // Final hard limiting for safety
+      leftChannel[i] = Math.tanh(leftChannel[i] * 1.2);
+      rightChannel[i] = Math.tanh(rightChannel[i] * 1.2);
+    }
+    
+    // Add frequency shifting effect (very subtle) for that "zaag" texture
+    if (drive > 0.5) {
+      let phase = 0;
+      const shiftFreq = 30 + drive * 20; // Higher drive = more shift (50-100 Hz)
+      const modDepth = 0.1 * drive; // Modulation depth proportional to drive
+      
+      for (let i = 0; i < length; i++) {
+        // Simple frequency shifter
+        phase += 2 * Math.PI * shiftFreq / this.sampleRate;
+        if (phase > 2 * Math.PI) phase -= 2 * Math.PI;
+        
+        // Apply subtle ring modulation
+        const modFactor = 1 + modDepth * Math.sin(phase);
+        leftChannel[i] *= modFactor;
+        rightChannel[i] *= modFactor;
+      }
     }
   }
 
   private applyReverseDistortion(leftChannel: Float32Array, rightChannel: Float32Array, amount: number, drive: number) {
     const length = leftChannel.length;
     
-    // First pass to get the envelope shape
+    // Reverse Bass distortion is characterized by a distinctive reverse envelope
+    // First create an accurate envelope of the signal
     const envelope = new Float32Array(length);
     for (let i = 0; i < length; i++) {
       envelope[i] = Math.abs(leftChannel[i]);
     }
     
-    // Smooth the envelope
-    this.smoothArray(envelope, 100);
+    // Apply more thorough smoothing for a natural envelope curve
+    this.smoothArray(envelope, 150);
     
-    // Apply the reversed envelope with distortion
+    // Prepare a reverse envelope that rises where the original signal decays
+    // This is the key characteristic of reverse bass
+    const reverseEnvelope = new Float32Array(length);
     for (let i = 0; i < length; i++) {
-      const reverseEnv = 1 - envelope[i];
-      const distFactor = 1 + drive * 2 * reverseEnv;
+      // Create a reverse curve with more character (not just 1-envelope)
+      // The power function creates a more musical curve
+      reverseEnvelope[i] = Math.pow(1 - envelope[i], 1.5);
+    }
+    
+    // Prepare LFO for pumping effect common in reverse bass
+    let lfoPhase = 0;
+    const lfoFreq = 8 + (drive * 8); // 8-16 Hz range based on drive
+    const lfoDepth = 0.3 + (drive * 0.3); // 30-60% depth based on drive
+    
+    // Apply the reversed envelope with specialized distortion
+    for (let i = 0; i < length; i++) {
+      // Update LFO - creates pumping effect
+      lfoPhase += 2 * Math.PI * lfoFreq / this.sampleRate;
+      if (lfoPhase > 2 * Math.PI) lfoPhase -= 2 * Math.PI;
       
-      const distortedL = this.softClip(leftChannel[i] * distFactor);
-      const distortedR = this.softClip(rightChannel[i] * distFactor);
+      // Calculate LFO modulation - slight asymmetry for more character
+      const lfoValue = 0.5 * (1 + Math.sin(lfoPhase)) * lfoDepth; 
       
+      // Apply reverse envelope with LFO modulation
+      const modulatedEnv = reverseEnvelope[i] * (1 + lfoValue);
+      
+      // Calculate distortion factor - stronger where original signal is quiet
+      const distFactor = 1 + drive * 3 * modulatedEnv;
+      
+      // Apply distortion
+      let distortedL = leftChannel[i] * distFactor;
+      let distortedR = rightChannel[i] * distFactor;
+      
+      // Apply soft clipping, which is characteristic of reverse bass
+      distortedL = this.softClip(distortedL);
+      distortedR = this.softClip(distortedR);
+      
+      // Add sub-harmonic enhancement to emphasize the "bass" in reverse bass
+      // This simulates the heavy sub content in this style
+      const subEnhancement = 0.4 * drive * modulatedEnv * Math.sin(0.5 * lfoPhase);
+      
+      // Mix with sub enhancement
+      distortedL += subEnhancement;
+      distortedR += subEnhancement;
+      
+      // Final mix between dry and wet signals
       leftChannel[i] = distortedL * amount + leftChannel[i] * (1 - amount);
       rightChannel[i] = distortedR * amount + rightChannel[i] * (1 - amount);
+      
+      // Apply final limiting for safety
+      leftChannel[i] = Math.tanh(leftChannel[i] * 0.95);
+      rightChannel[i] = Math.tanh(rightChannel[i] * 0.95);
+    }
+    
+    // Add subtle sidechain compression effect for that pumping character
+    if (drive > 0.3) {
+      // Create sidechain envelope - stronger at beginning, weaker at end
+      const sidechain = new Float32Array(length);
+      for (let i = 0; i < length; i++) {
+        sidechain[i] = Math.exp(-i / (this.sampleRate * 0.2)); // 200ms decay
+      }
+      
+      // Apply sidechain envelope
+      for (let i = 0; i < length; i++) {
+        const sidechainAmount = 0.2 + drive * 0.3; // 20-50% based on drive
+        const gain = 1 - sidechain[i] * sidechainAmount;
+        leftChannel[i] *= gain;
+        rightChannel[i] *= gain;
+      }
     }
   }
 
