@@ -87,7 +87,7 @@ const KickGeneratorApp: React.FC = () => {
               </header>
 
               {/* Main Content Container */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-full">
                 {/* Left Column - Controls */}
                 <div className="space-y-8">
                   <div className="box-brutalist border-glow">
