@@ -1,9 +1,4 @@
-/**
- * AudioEngine.ts
- * Main audio processing engine for generating hardstyle kicks
- */
-
-import { KickParameters, KickType, KeyOption } from '@/lib/types';
+import { KickParameters, KickType, KeyOption } from "@/lib/types";
 
 class AudioEngine {
   private audioContext: AudioContext | null = null;
@@ -23,445 +18,341 @@ class AudioEngine {
   private waveformData = new Float32Array(1024);
   private fftData = new Float32Array(1024);
 
-  /**
-   * Initialize the audio context and nodes
-   */
   initialize(): Promise<boolean> {
-    return new Promise((resolve) => {
-      try {
-        // Create audio context
-        this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        this.sampleRate = this.audioContext.sampleRate;
-        
-        // Create analyzer for visualizations
-        this.analyserNode = this.audioContext.createAnalyser();
-        this.analyserNode.fftSize = this.fftSize;
-        this.analyserNode.smoothingTimeConstant = 0.3;
-        
-        // Create gain node for volume control
-        this.gainNode = this.audioContext.createGain();
-        this.gainNode.gain.value = 0.8; // Default volume
-        
-        // Connect nodes
-        this.gainNode.connect(this.analyserNode);
-        this.analyserNode.connect(this.audioContext.destination);
-        
-        resolve(true);
-      } catch (err) {
-        console.error('Error initializing audio context:', err);
-        resolve(false);
-      }
-    });
+    try {
+      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      this.sampleRate = this.audioContext.sampleRate;
+      
+      // Set up nodes
+      this.analyserNode = this.audioContext.createAnalyser();
+      this.analyserNode.fftSize = this.fftSize;
+      
+      this.gainNode = this.audioContext.createGain();
+      this.gainNode.gain.value = 1.0;
+      
+      // Connect graph
+      this.gainNode.connect(this.analyserNode);
+      this.analyserNode.connect(this.audioContext.destination);
+      
+      return Promise.resolve(true);
+    } catch (error) {
+      console.error("Error initializing audio engine:", error);
+      return Promise.resolve(false);
+    }
   }
 
-  /**
-   * Set a callback function for visualization updates
-   */
   setVisualizationCallback(callback: (waveform: Float32Array, fft: Float32Array, rms: number, peak: number) => void) {
     this.visualizationCallback = callback;
   }
-
-  /**
-   * Set a callback function for playback progress updates
-   */
+  
   setProgressCallback(callback: (progress: number) => void) {
     this.progressCallback = callback;
   }
 
-  /**
-   * Set the volume for playback
-   */
   setVolume(volume: number) {
     if (this.gainNode) {
-      this.gainNode.gain.value = volume;
+      // Convert dB to linear scale (0dB = 1.0)
+      const linearVolume = Math.pow(10, volume / 20);
+      this.gainNode.gain.value = linearVolume;
     }
   }
 
-  /**
-   * Generate a kick with the given parameters
-   */
   async generateKick(parameters: KickParameters, key: KeyOption): Promise<void> {
     if (!this.audioContext) {
-      console.error('Audio context not initialized');
-      return;
+      await this.initialize();
     }
-
-    // Update current parameters
+    
     this.currentParameters = parameters;
     this.currentKey = key;
-
-    // Stop any current playback
-    this.stopPlayback();
-
-    // Generate kick
-    const durationSec = 2.0; // 2 seconds
     
-    try {
-      // Create the kick buffer with the specified parameters
-      this.kickBuffer = await this.createKickBuffer(parameters, key, durationSec);
-      
-      // Automatically play the kick after generation
-      if (this.kickBuffer) {
-        this.play();
-      }
-    } catch (err) {
-      console.error('Error generating kick:', err);
+    const durationSec = Math.max(
+      0.6, // Minimum duration
+      (parameters.adsr.attack + parameters.adsr.decay + parameters.adsr.release) / 1000
+    );
+    
+    this.kickBuffer = await this.createKickBuffer(parameters, key, durationSec);
+    
+    if (this.isPlaying) {
+      this.stopPlayback();
+      this.play();
     }
   }
 
-  /**
-   * Create an audio buffer containing the kick
-   */
   private async createKickBuffer(parameters: KickParameters, key: KeyOption, durationSec: number): Promise<AudioBuffer> {
-    if (!this.audioContext) {
-      throw new Error('Audio context not initialized');
-    }
+    if (!this.audioContext) throw new Error("Audio context not initialized");
     
-    // Create buffer
-    const numSamples = Math.floor(durationSec * this.sampleRate);
+    const numSamples = Math.ceil(durationSec * this.sampleRate);
     const buffer = this.audioContext.createBuffer(2, numSamples, this.sampleRate);
     
-    // Get audio data
+    // Get the actual array for each channel
     const leftChannel = buffer.getChannelData(0);
     const rightChannel = buffer.getChannelData(1);
     
-    // Clear buffer
-    for (let i = 0; i < numSamples; i++) {
-      leftChannel[i] = 0;
-      rightChannel[i] = 0;
-    }
-    
-    // Generate the layers of the kick
-    // 1. Punch Layer (sine wave with pitch envelope)
+    // Generate the kick sound
     this.generatePunchLayer(leftChannel, rightChannel, parameters, key, durationSec);
-    
-    // 2. Crunch Layer (distortion)
     this.generateCrunchLayer(leftChannel, rightChannel, parameters, key, durationSec);
-    
-    // 3. Apply effects
     this.applyEffects(leftChannel, rightChannel, parameters);
     
     return buffer;
   }
 
-  /**
-   * Generate the punch layer (attack and body of the kick)
-   */
   private generatePunchLayer(leftChannel: Float32Array, rightChannel: Float32Array, parameters: KickParameters, key: KeyOption, durationSec: number) {
     const { click, pitch, adsr, sub } = parameters;
-    const length = leftChannel.length;
+    const sampleRate = this.sampleRate;
+    const attackSamples = Math.floor(adsr.attack * sampleRate / 1000);
+    const decaySamples = Math.floor(adsr.decay * sampleRate / 1000);
+    const releaseSamples = Math.floor(adsr.release * sampleRate / 1000);
+    const sustainLevel = adsr.sustain / 100;
+    const numSamples = leftChannel.length;
     
-    // Frequency calculations
+    // Pitch envelope parameters - more extreme for hardstyle kicks
     const baseFreq = key.frequency;
-    const pitchStart = baseFreq * Math.pow(2, pitch.start / 12); // Convert semitone to frequency ratio
-    const pitchEnd = baseFreq;
-    const pitchTime = pitch.time;
+    // Start much higher for a more dramatic pitch drop
+    const startFreq = baseFreq * Math.max(3, pitch.start / 5); 
+    const pitchEnvTime = pitch.time / 1000; // Convert to seconds
+    const pitchEnvSamples = Math.floor(pitchEnvTime * sampleRate);
     
-    // ADSR envelope
-    const attackSamples = Math.floor(adsr.attack * this.sampleRate);
-    const decaySamples = Math.floor(adsr.decay * this.sampleRate);
-    const releaseSamples = Math.floor(adsr.release * this.sampleRate);
-    const sustainLevel = adsr.sustain;
-    
-    // Phase accumulator for the sine oscillator
-    let phase = 0;
-    
-    // Click sample generation (optional)
-    if (click.enabled) {
-      const clickLength = Math.floor(0.015 * this.sampleRate); // 15ms click
-      const clickAmplitude = click.amount / 100;
-      const clickTone = 500 + (click.tone * 20); // 500Hz - 2500Hz
-      
-      for (let i = 0; i < clickLength; i++) {
-        // Generate click sound (bandpass filtered noise)
-        let noise = (Math.random() * 2 - 1);
-        
-        // Simple resonant filter for click tone
-        const r = 0.98; // Resonance
-        const f = 2 * Math.sin(Math.PI * clickTone / this.sampleRate);
-        let filterOutput = noise * (1 - r) + r * (Math.sin(2 * Math.PI * clickTone * i / this.sampleRate));
-        
-        // Apply quick envelope
-        const env = (1 - i / clickLength) * clickAmplitude;
-        
-        // Add to channels
-        leftChannel[i] += filterOutput * env;
-        rightChannel[i] += filterOutput * env;
+    // Improved non-linear pitch curve for more professional sound
+    // Precompute pitch curve for efficiency and better control
+    const pitchCurve = new Float32Array(numSamples);
+    for (let i = 0; i < numSamples; i++) {
+      if (i < pitchEnvSamples) {
+        // Non-linear curve that starts fast and slows down - sounds more natural
+        const pitchProgress = Math.pow(i / pitchEnvSamples, 0.5); // Power curve for more aggressive initial drop
+        pitchCurve[i] = startFreq - (startFreq - baseFreq) * pitchProgress;
+      } else {
+        pitchCurve[i] = baseFreq;
       }
     }
     
-    // Generate the main sine wave with pitch envelope
-    for (let i = 0; i < length; i++) {
-      // Calculate envelope
-      let envelope = 0;
-      const t = i / this.sampleRate;
+    // Click oscillator parameters - critically important for hardstyle kick punch
+    const clickAmount = click.enabled ? click.amount / 100 : 0;
+    const clickTone = click.tone / 100; // Controls the frequency of the click
+    
+    // Use a mix of sine and noise for more realistic click
+    const clickFreq = 1500 + (clickTone * 5000); // 1.5kHz to 6.5kHz - more range for transient
+    
+    // Sub oscillator - key for that deep sub feeling
+    const subAmount = sub.enabled ? sub.amount / 100 : 0;
+    
+    // Phase accumulation for oscillators
+    let phase = 0;
+    let subPhase = 0;
+    let clickPhase = 0;
+    
+    // White noise buffer for click component
+    const noiseBuffer = new Float32Array(numSamples);
+    for (let i = 0; i < numSamples; i++) {
+      noiseBuffer[i] = Math.random() * 2 - 1;
+    }
+    
+    // Improved amplitude envelope with better attack curve for punch
+    for (let i = 0; i < numSamples; i++) {
+      // Calculate amplitude envelope with better curves for punch sound
+      let amplitude = 0;
       
       if (i < attackSamples) {
-        // Attack phase
-        envelope = i / attackSamples;
+        // Attack phase - slightly curved for better punch
+        amplitude = Math.pow(i / attackSamples, 0.8); // Slightly curved attack
       } else if (i < attackSamples + decaySamples) {
-        // Decay phase
+        // Decay phase with improved curve
         const decayProgress = (i - attackSamples) / decaySamples;
-        envelope = 1 - (1 - sustainLevel) * decayProgress;
-      } else if (i < length - releaseSamples) {
+        amplitude = 1.0 - Math.pow(decayProgress, 0.7) * (1.0 - sustainLevel);
+      } else if (i < numSamples - releaseSamples) {
         // Sustain phase
-        envelope = sustainLevel;
+        amplitude = sustainLevel;
       } else {
-        // Release phase
-        const releaseProgress = (i - (length - releaseSamples)) / releaseSamples;
-        envelope = sustainLevel * (1 - releaseProgress);
+        // Release phase with improved curve
+        const releaseProgress = (i - (numSamples - releaseSamples)) / releaseSamples;
+        amplitude = sustainLevel * (1.0 - Math.pow(releaseProgress, 1.2));
       }
       
-      // Calculate pitch (logarithmic pitch envelope)
-      let currentPitch = pitchEnd;
-      if (t < pitchTime) {
-        // Non-linear pitch envelope for more natural sound
-        const pitchProgress = t / pitchTime;
-        // Exponential pitch fall with initial rapid drop
-        currentPitch = pitchStart * Math.pow(pitchEnd / pitchStart, Math.pow(pitchProgress, 0.5));
+      // Use the precomputed pitch curve
+      const frequency = pitchCurve[i];
+      
+      // Calculate the phase increment based on frequency
+      const phaseIncrement = frequency / sampleRate * 2 * Math.PI;
+      phase += phaseIncrement;
+      
+      // Sub bass (one octave lower) - more pronounced in hardstyle
+      const subPhaseIncrement = (frequency / 2) / sampleRate * 2 * Math.PI;
+      subPhase += subPhaseIncrement;
+      
+      // Click sound (higher pitched, decays quickly)
+      const clickPhaseIncrement = clickFreq / sampleRate * 2 * Math.PI;
+      clickPhase += clickPhaseIncrement;
+      
+      // Calculate click envelope (faster decay for sharper transient)
+      // Two-stage click for more realistic attack
+      let clickEnvelope;
+      if (i < sampleRate * 0.005) { // First 5ms - very sharp attack
+        clickEnvelope = clickAmount * Math.exp(-i / (sampleRate * 0.002)); 
+      } else {
+        clickEnvelope = clickAmount * 0.7 * Math.exp(-(i - sampleRate * 0.005) / (sampleRate * 0.01));
       }
       
-      // Calculate phase increment based on current pitch
-      const phaseInc = 2 * Math.PI * currentPitch / this.sampleRate;
+      // Main oscillator (sine wave with soft clipping for warmth)
+      const sineValue = Math.tanh(1.2 * Math.sin(phase)); // Slight saturation for warmth
       
-      // Accumulate phase
-      phase += phaseInc;
-      if (phase > 2 * Math.PI) {
-        phase -= 2 * Math.PI;
-      }
+      // Sub oscillator (sine wave with enhancement)
+      const subValue = Math.sin(subPhase) * subAmount * (1 + 0.05 * Math.sin(subPhase * 1.5));
       
-      // Generate sine wave
-      const sample = Math.sin(phase);
+      // Click oscillator (mix of sine and noise for realism)
+      const noisePart = noiseBuffer[i] * 0.3; // 30% noise
+      const sinePart = Math.sin(clickPhase) * 0.7; // 70% sine wave
+      const clickValue = (noisePart + sinePart) * clickEnvelope;
       
-      // Add to channels with envelope
-      leftChannel[i] += sample * envelope;
-      rightChannel[i] += sample * envelope;
+      // Apply slight distortion to the sine component for more character
+      const distortedSine = Math.tanh(sineValue * 1.5) * 0.8;
       
-      // Add sub-bass layer if enabled
-      if (sub.enabled) {
-        const subAmount = sub.amount / 100;
-        const subPhase = phase * 0.5; // One octave lower
-        const subSample = Math.sin(subPhase) * subAmount;
-        
-        leftChannel[i] += subSample * envelope;
-        rightChannel[i] += subSample * envelope;
-      }
+      // Mix all components with improved balancing
+      const sample = (distortedSine * 0.6 + subValue * 0.4) * amplitude + clickValue;
+      
+      // Add slight compression/limiting for a more polished sound
+      const compressedSample = Math.tanh(sample * 1.2) * 0.9;
+      
+      // Apply to both channels
+      leftChannel[i] += compressedSample;
+      rightChannel[i] += compressedSample;
     }
   }
 
-  /**
-   * Generate the crunch layer with distortion
-   */
   private generateCrunchLayer(leftChannel: Float32Array, rightChannel: Float32Array, parameters: KickParameters, key: KeyOption, durationSec: number) {
     const { distortion } = parameters;
     const distAmount = distortion.amount / 100;
     const drive = distortion.drive / 100;
     
-    // Skip if no distortion
-    if (distAmount === 0) return;
-    
-    // Apply the appropriate distortion based on type
+    // Apply different distortion types based on the kick type
     switch (distortion.type) {
-      case 'gated':
+      case "gated":
         this.applyGatedDistortion(leftChannel, rightChannel, distAmount, drive);
         break;
-      case 'euphoric':
+      case "euphoric":
         this.applyEuphoricDistortion(leftChannel, rightChannel, distAmount, drive);
         break;
-      case 'zaag':
+      case "zaag":
         this.applyZaagDistortion(leftChannel, rightChannel, distAmount, drive);
         break;
-      case 'reverse':
+      case "reverse":
         this.applyReverseDistortion(leftChannel, rightChannel, distAmount, drive);
         break;
     }
   }
 
-  /**
-   * Apply gated rawstyle distortion
-   */
   private applyGatedDistortion(leftChannel: Float32Array, rightChannel: Float32Array, amount: number, drive: number) {
     const length = leftChannel.length;
     
-    // FIXING GATED RAWSTYLE - MAKE GATING MUCH MORE EXTREME AND PRONOUNCED
-    
-    // Rawstyle gating frequency - lower frequency for more extreme effect
-    const gateFreq = 16 + (drive * 8); // 16-24Hz = much more pronounced gating
+    // Professional Rawstyle kicks use complex gating patterns
+    // More aggressive and tighter gating for that raw sound
+    const gateFreq = 32 + (drive * 16); // Dynamic gate frequency (32-48Hz)
     const gateInterval = Math.floor(this.sampleRate / gateFreq);
     
-    // Make a copy of the original signal for later mixing
-    const originalL = new Float32Array(leftChannel);
-    const originalR = new Float32Array(rightChannel);
-    
-    // First apply extreme hard clipping with pre-gain for raw character
+    // First apply hard clipping with pre-gain to generate rich harmonics
     for (let i = 0; i < length; i++) {
-      // Apply super heavy pre-drive - essential for gated sound
-      const driveAmount = 1 + drive * 8; // Much more extreme drive
+      // Apply heavy pre-drive - essential for raw kicks
+      const driveAmount = 1 + drive * 5; // More extreme drive for rawstyle
       leftChannel[i] *= driveAmount;
       rightChannel[i] *= driveAmount;
       
-      // Hard clipping with lower threshold for more obvious effect
-      const threshold = 0.5;
+      // Hard clipping with variable threshold for more character
+      const threshold = 0.6 + drive * 0.3;
       leftChannel[i] = this.hardClip(leftChannel[i], threshold);
       rightChannel[i] = this.hardClip(rightChannel[i], threshold);
     }
     
-    // Create output arrays
-    const outputL = new Float32Array(length);
-    const outputR = new Float32Array(length);
+    // Apply an envelope to the distortion for dynamic character
+    const envelope = new Float32Array(length);
+    for (let i = 0; i < length; i++) {
+      // Create simple amplitude envelope based on the audio
+      envelope[i] = Math.abs(leftChannel[i]);
+    }
     
-    // Now apply the extreme gating effect - much more dramatic on/off pattern
+    // Smooth the envelope
+    this.smoothArray(envelope, 50);
+    
+    // Now apply the gating effect with enhanced character
     for (let i = 0; i < length; i++) {
       // Calculate gate position for this sample
       const gatePosition = i % gateInterval;
       
-      // DRASTICALLY improved gate pattern with extreme on/off for rawstyle
+      // Professional gating pattern with smoother transition
       let gateFactor;
       const gateRatio = gatePosition / gateInterval;
       
-      // Much sharper on/off ratio - 40% on, 60% off for extreme gating effect
-      if (gateRatio < 0.4) { 
+      if (gateRatio < 0.8) {
         // On portion - full volume
         gateFactor = 1.0;
-      } else if (gateRatio < 0.45) {
-        // Very quick transition
-        gateFactor = 1.0 - (gateRatio - 0.4) * 20; 
+      } else if (gateRatio < 0.85) {
+        // Smooth transition down
+        gateFactor = 1.0 - (gateRatio - 0.8) * 20; // Ramp down over 5% of cycle
       } else {
-        // Off portion - almost silent for obvious gating effect
-        gateFactor = 0.05; // Nearly silent for dramatic effect
+        // Off portion - lower but not silent
+        gateFactor = 0.1 + (drive * 0.1); // More drive keeps more sound during off period
       }
       
-      // Apply gating to a heavily distorted copy
-      outputL[i] = leftChannel[i] * gateFactor;
-      outputR[i] = rightChannel[i] * gateFactor; 
+      // Apply the gating with dynamic character based on envelope
+      const effectiveAmount = amount * (0.8 + envelope[i] * 0.2); // More effect on louder parts
       
-      // Add extreme distortion after gating - vital for raw sound
-      outputL[i] = this.asymClip(outputL[i] * (1 + drive * 2.0));
-      outputR[i] = this.asymClip(outputR[i] * (1 + drive * 2.0));
-    }
-    
-    // Add a phase-aligned sub that follows the gate pattern for extra punch
-    let subPhase = 0;
-    for (let i = 0; i < length; i++) {
-      // Calculate gate position again
-      const gatePosition = i % gateInterval;
-      const gateRatio = gatePosition / gateInterval;
+      // Apply gating with a slight emphasis on attack transients
+      leftChannel[i] *= gateFactor * effectiveAmount + (1 - effectiveAmount);
+      rightChannel[i] *= gateFactor * effectiveAmount + (1 - effectiveAmount);
       
-      // Use same gate pattern for sub
-      let gateFactor = gateRatio < 0.4 ? 1.0 : 0.05;
-      
-      // Add a sub oscillator that follows the gating
-      const baseFreq = 50; // 50Hz sub
-      const phaseInc = 2 * Math.PI * baseFreq / this.sampleRate;
-      subPhase += phaseInc;
-      if (subPhase > 2 * Math.PI) subPhase -= 2 * Math.PI;
-      
-      const subOsc = Math.sin(subPhase) * 0.3 * gateFactor * amount;
-      
-      // Mix in the sub
-      outputL[i] += subOsc;
-      outputR[i] += subOsc;
-    }
-    
-    // Final mix - blend original and processed
-    const wetMix = amount * 0.9; // 90% wet for extreme effect
-    for (let i = 0; i < length; i++) {
-      leftChannel[i] = outputL[i] * wetMix + originalL[i] * (1 - wetMix);
-      rightChannel[i] = outputR[i] * wetMix + originalR[i] * (1 - wetMix);
-      
-      // Final hard limiting for safety
-      leftChannel[i] = this.hardClip(leftChannel[i], 0.95);
-      rightChannel[i] = this.hardClip(rightChannel[i], 0.95);
+      // Add slight distortion after gating for more bite
+      leftChannel[i] = this.asymClip(leftChannel[i] * (1 + drive * 0.5));
+      rightChannel[i] = this.asymClip(rightChannel[i] * (1 + drive * 0.5));
     }
   }
 
-  /**
-   * Apply euphoric distortion
-   */
   private applyEuphoricDistortion(leftChannel: Float32Array, rightChannel: Float32Array, amount: number, drive: number) {
     const length = leftChannel.length;
     
-    // Make copy of original signal for mixing
-    const originalL = new Float32Array(leftChannel);
-    const originalR = new Float32Array(rightChannel);
-    
-    // Euphoric kicks need clear definition with tonal character
-    // Create envelope modulation frequencies for movement
-    const modFreq1 = 8;  // 8 Hz modulation
-    const modFreq2 = 16; // 16 Hz - more characteristic of euphoric
-    let phase1 = 0;
-    let phase2 = 0;
-    
-    // Process in two stages for true euphoric character
-    // 1. First stage - clean punch in the attack (the "ting") 
-    //    with boosted highs
-    // 2. Second stage - warm sustain with tubey harmonics
-    
-    // First, generate special euphoric "ting" in the attack
-    const attackSamples = Math.floor(0.1 * this.sampleRate); // 100ms attack
-    for (let i = 0; i < Math.min(attackSamples, length); i++) {
-      // Emphasized attack with slight frequency shift
-      const attackEnv = 1.0 - (i / attackSamples);
-      
-      // Add subtle frequency shift for "ting" character
-      const modPhase = 2 * Math.PI * 80 * i / this.sampleRate; // 80Hz shift
-      
-      // Apply frequency shift modulation 
-      const tingAmount = attackEnv * 0.5 * amount * drive;
-      leftChannel[i] += Math.sin(modPhase) * tingAmount;
-      rightChannel[i] += Math.sin(modPhase) * tingAmount;
-    }
-    
-    // Apply variable saturation throughout the sample
+    // Euphoric hardstyle kicks use warm tube-like saturation with a clean tail
+    // Create an envelope to make distortion musical and dynamic
+    const envelope = new Float32Array(length);
     for (let i = 0; i < length; i++) {
-      // Update modulation phases
-      phase1 += 2 * Math.PI * modFreq1 / this.sampleRate;
-      phase2 += 2 * Math.PI * modFreq2 / this.sampleRate;
-      if (phase1 > 2 * Math.PI) phase1 -= 2 * Math.PI;
-      if (phase2 > 2 * Math.PI) phase2 -= 2 * Math.PI;
-      
-      // Calculate euphoric character modulation
-      // This creates the clear, sweet tone euphoric kicks are known for
-      const mod = 0.5 + (0.5 * Math.sin(phase1)) * 0.3 + (0.5 * Math.sin(phase2)) * 0.2;
-      
-      // Calculate position-dependent saturation/distortion
-      const positionFactor = Math.max(0, 1.0 - i / (length * 0.8)); // Stronger at start
-      const saturationAmount = drive * (0.7 + mod * 0.3) * positionFactor;
-      
-      // First stage - soft tube-style saturation for warmth
-      let leftSample = leftChannel[i] * (1 + saturationAmount * 3);
-      let rightSample = rightChannel[i] * (1 + saturationAmount * 3);
-      
-      // Apply asymmetric soft clipping for tube-like harmonics
-      const tubeWarmth = 0.7 + drive * 0.6; // Increase with drive
-      leftSample = Math.tanh(leftSample * tubeWarmth);
-      rightSample = Math.tanh(rightSample * tubeWarmth);
-      
-      // Add slight second-order harmonics (typical of euphoric)
-      leftSample += 0.2 * saturationAmount * leftSample * leftSample;
-      rightSample += 0.2 * saturationAmount * rightSample * rightSample;
-      
-      // Mix processed with original
-      leftChannel[i] = leftSample * amount + originalL[i] * (1 - amount);
-      rightChannel[i] = rightSample * amount + originalR[i] * (1 - amount);
+      envelope[i] = Math.abs(leftChannel[i]);
     }
     
-    // Apply enhancer for distinct euphoric character
-    // Euphoric needs "air" and clarity in the highs
-    for (let i = 1; i < length; i++) {
-      // Simple high-frequency enhancer
-      const enhanceAmount = 0.2 * drive * amount;
-      const highFreq = leftChannel[i] - leftChannel[i-1];
-      leftChannel[i] += highFreq * enhanceAmount;
+    // Smooth the envelope for natural sound
+    this.smoothArray(envelope, 200); // Smoother envelope for euphoric
+    
+    // Apply tube-like saturation that's stronger on transients
+    for (let i = 0; i < length; i++) {
+      // Calculate drive amount that diminishes over time for clean tail
+      const dynamicDrive = drive * (0.8 + envelope[i] * 3.0);
       
-      const highFreqR = rightChannel[i] - rightChannel[i-1];  
-      rightChannel[i] += highFreqR * enhanceAmount;
+      // First stage - soft saturation (tube emulation)
+      let leftSample = leftChannel[i] * (1 + dynamicDrive);
+      let rightSample = rightChannel[i] * (1 + dynamicDrive);
+      
+      // Tube-like soft clipping with asymmetry for richer harmonics
+      leftSample = Math.tanh(leftSample) * 0.6 + Math.tanh(leftSample * 1.5) * 0.4;
+      rightSample = Math.tanh(rightSample) * 0.6 + Math.tanh(rightSample * 1.5) * 0.4;
+      
+      // Add subtle second harmonic for warmth (characteristic of tube amps)
+      leftSample += 0.1 * dynamicDrive * leftSample * leftSample;
+      rightSample += 0.1 * dynamicDrive * rightSample * rightSample;
+      
+      // Apply slight high-frequency enhancement for air
+      if (i > 0) {
+        // Simple high-frequency enhancement
+        const highFreq = leftChannel[i] - leftChannel[i-1];
+        leftSample += highFreq * 0.2 * drive;
+        
+        const highFreqR = rightChannel[i] - rightChannel[i-1];
+        rightSample += highFreqR * 0.2 * drive;
+      }
+      
+      // Mix between dry and processed signal based on amount
+      leftChannel[i] = leftSample * amount + leftChannel[i] * (1 - amount);
+      rightChannel[i] = rightSample * amount + rightChannel[i] * (1 - amount);
+      
+      // Add slight compression for punch and loudness
+      leftChannel[i] = Math.tanh(leftChannel[i] * 1.2) * 0.9;
+      rightChannel[i] = Math.tanh(rightChannel[i] * 1.2) * 0.9;
     }
   }
 
-  /**
-   * Apply zaag (saw) distortion
-   */
   private applyZaagDistortion(leftChannel: Float32Array, rightChannel: Float32Array, amount: number, drive: number) {
     const length = leftChannel.length;
     
@@ -527,126 +418,91 @@ class AudioEngine {
     }
   }
 
-  /**
-   * Apply reverse bass distortion
-   */
   private applyReverseDistortion(leftChannel: Float32Array, rightChannel: Float32Array, amount: number, drive: number) {
     const length = leftChannel.length;
     
-    // THIS IS COMPLETELY NEW - Make reverse bass VERY different from euphoric
-    
-    // Make a copy of the original signal
-    const originalL = new Float32Array(leftChannel);
-    const originalR = new Float32Array(rightChannel);
-    
-    // Create a very precise envelope for the reverse effect
+    // Reverse Bass distortion is characterized by a distinctive reverse envelope
+    // First create an accurate envelope of the signal
     const envelope = new Float32Array(length);
     for (let i = 0; i < length; i++) {
       envelope[i] = Math.abs(leftChannel[i]);
     }
     
-    // Smooth the envelope thoroughly
-    this.smoothArray(envelope, 200);
+    // Apply more thorough smoothing for a natural envelope curve
+    this.smoothArray(envelope, 150);
     
-    // Create a more extreme reverse envelope - this is the key element
+    // Prepare a reverse envelope that rises where the original signal decays
+    // This is the key characteristic of reverse bass
     const reverseEnvelope = new Float32Array(length);
     for (let i = 0; i < length; i++) {
-      // Create a reverse curve with more dramatic shape
-      // The power function creates a more extreme curve - essential for reverse bass
-      const normPosition = i / length;
-      const envelopeValue = envelope[i];
-      
-      // Combine position-based envelope with amplitude-based for true reverse effect
-      // Reverse bass should swell dramatically where the original decays
-      reverseEnvelope[i] = Math.pow(1 - envelopeValue, 2.0) * Math.pow(normPosition, 0.5);
+      // Create a reverse curve with more character (not just 1-envelope)
+      // The power function creates a more musical curve
+      reverseEnvelope[i] = Math.pow(1 - envelope[i], 1.5);
     }
     
-    // Create output arrays for processing
-    const outputL = new Float32Array(length);
-    const outputR = new Float32Array(length);
-    
-    // Create modulation LFO specifically for reverse bass - much faster than euphoric!
+    // Prepare LFO for pumping effect common in reverse bass
     let lfoPhase = 0;
-    const lfoFreq = 24 + (drive * 12); // 24-36Hz - much faster for obvious reverse character
+    const lfoFreq = 8 + (drive * 8); // 8-16 Hz range based on drive
+    const lfoDepth = 0.3 + (drive * 0.3); // 30-60% depth based on drive
     
-    // Apply processing with extreme modulation
+    // Apply the reversed envelope with specialized distortion
     for (let i = 0; i < length; i++) {
-      // Update LFO - creates the distinctive reverse bass pumping
+      // Update LFO - creates pumping effect
       lfoPhase += 2 * Math.PI * lfoFreq / this.sampleRate;
       if (lfoPhase > 2 * Math.PI) lfoPhase -= 2 * Math.PI;
       
-      // Square-ish LFO shape for more aggressive modulation
-      const lfoValue = Math.pow(0.5 * (1 + Math.sin(lfoPhase)), 0.7);
+      // Calculate LFO modulation - slight asymmetry for more character
+      const lfoValue = 0.5 * (1 + Math.sin(lfoPhase)) * lfoDepth; 
       
-      // Apply reverse envelope with LFO
-      const modulationAmount = reverseEnvelope[i] * (0.7 + lfoValue * 0.6);
+      // Apply reverse envelope with LFO modulation
+      const modulatedEnv = reverseEnvelope[i] * (1 + lfoValue);
       
-      // Apply extreme distortion that follows the reverse pattern
-      const distortionAmount = 1 + (drive * 5) * modulationAmount;
+      // Calculate distortion factor - stronger where original signal is quiet
+      const distFactor = 1 + drive * 3 * modulatedEnv;
       
-      // Process samples
-      outputL[i] = leftChannel[i] * distortionAmount;
-      outputR[i] = rightChannel[i] * distortionAmount;
+      // Apply distortion
+      let distortedL = leftChannel[i] * distFactor;
+      let distortedR = rightChannel[i] * distFactor;
       
-      // Apply hard clipping which is essential for reverse bass character
-      outputL[i] = this.hardClip(outputL[i], 0.7);
-      outputR[i] = this.hardClip(outputR[i], 0.7);
+      // Apply soft clipping, which is characteristic of reverse bass
+      distortedL = this.softClip(distortedL);
+      distortedR = this.softClip(distortedR);
+      
+      // Add sub-harmonic enhancement to emphasize the "bass" in reverse bass
+      // This simulates the heavy sub content in this style
+      const subEnhancement = 0.4 * drive * modulatedEnv * Math.sin(0.5 * lfoPhase);
+      
+      // Mix with sub enhancement
+      distortedL += subEnhancement;
+      distortedR += subEnhancement;
+      
+      // Final mix between dry and wet signals
+      leftChannel[i] = distortedL * amount + leftChannel[i] * (1 - amount);
+      rightChannel[i] = distortedR * amount + rightChannel[i] * (1 - amount);
+      
+      // Apply final limiting for safety
+      leftChannel[i] = Math.tanh(leftChannel[i] * 0.95);
+      rightChannel[i] = Math.tanh(rightChannel[i] * 0.95);
     }
     
-    // Add sub bass modulation - another key element of reverse bass
-    let subPhase = 0;
-    for (let i = 0; i < length; i++) {
-      // Sub oscillator follows reverse envelope
-      const subFreq = 40 + 30 * reverseEnvelope[i]; // 40-70Hz range
+    // Add subtle sidechain compression effect for that pumping character
+    if (drive > 0.3) {
+      // Create sidechain envelope - stronger at beginning, weaker at end
+      const sidechain = new Float32Array(length);
+      for (let i = 0; i < length; i++) {
+        sidechain[i] = Math.exp(-i / (this.sampleRate * 0.2)); // 200ms decay
+      }
       
-      // Update phase
-      const phaseInc = 2 * Math.PI * subFreq / this.sampleRate;
-      subPhase += phaseInc;
-      if (subPhase > 2 * Math.PI) subPhase -= 2 * Math.PI;
-      
-      // Generate sub bass tone
-      const subAmount = 0.4 * amount * reverseEnvelope[i] * drive;
-      const subSample = Math.sin(subPhase) * subAmount;
-      
-      // Add to output
-      outputL[i] += subSample;
-      outputR[i] += subSample;
-    }
-    
-    // Emphasize low mids for thickness
-    let lowMidZ1L = 0, lowMidZ1R = 0;
-    const lowMidFreq = 300 / this.sampleRate;
-    const lowMidQ = 0.7;
-    
-    for (let i = 0; i < length; i++) {
-      // Simple one-pole lowpass for low mids
-      lowMidZ1L = lowMidZ1L * (1 - lowMidFreq) + outputL[i] * lowMidFreq;
-      lowMidZ1R = lowMidZ1R * (1 - lowMidFreq) + outputR[i] * lowMidFreq;
-      
-      // Boost low mids - key for reverse bass body
-      const lowMidBoost = 0.6 * drive * reverseEnvelope[i];
-      outputL[i] += lowMidZ1L * lowMidBoost;
-      outputR[i] += lowMidZ1R * lowMidBoost;
-    }
-    
-    // Final mixing - blend original and processed with amplitude-dependent mixing
-    for (let i = 0; i < length; i++) {
-      // Make wet/dry mix follow reverse envelope for more character
-      const dynamicAmount = amount * (0.7 + 0.3 * reverseEnvelope[i]);
-      
-      // Mix original and processed
-      leftChannel[i] = outputL[i] * dynamicAmount + originalL[i] * (1 - dynamicAmount);
-      rightChannel[i] = outputR[i] * dynamicAmount + originalR[i] * (1 - dynamicAmount);
-      
-      // Final limiting
-      leftChannel[i] = this.hardClip(leftChannel[i], 0.95);
-      rightChannel[i] = this.hardClip(rightChannel[i], 0.95);
+      // Apply sidechain envelope
+      for (let i = 0; i < length; i++) {
+        const sidechainAmount = 0.2 + drive * 0.3; // 20-50% based on drive
+        const gain = 1 - sidechain[i] * sidechainAmount;
+        leftChannel[i] *= gain;
+        rightChannel[i] *= gain;
+      }
     }
   }
 
-  /**
-   * Apply effects (EQ, saturation, reverb, bitcrushing)
-   */
   private applyEffects(leftChannel: Float32Array, rightChannel: Float32Array, parameters: KickParameters) {
     const { eq, effects } = parameters;
     
@@ -672,9 +528,6 @@ class AudioEngine {
     }
   }
 
-  /**
-   * Apply a simple 3-band EQ
-   */
   private applySimpleEQ(leftChannel: Float32Array, rightChannel: Float32Array, low: number, mid: number, high: number) {
     // This is a simplified EQ simulation
     // In a real implementation, you'd use biquad filters
@@ -715,9 +568,6 @@ class AudioEngine {
     }
   }
 
-  /**
-   * Apply saturation effect
-   */
   private applySaturation(leftChannel: Float32Array, rightChannel: Float32Array, amount: number) {
     const length = leftChannel.length;
     
@@ -727,9 +577,6 @@ class AudioEngine {
     }
   }
 
-  /**
-   * Apply a simple reverb effect
-   */
   private applySimpleReverb(leftChannel: Float32Array, rightChannel: Float32Array, amount: number) {
     const length = leftChannel.length;
     const delaySamples = Math.floor(this.sampleRate * 0.05); // 50ms delay
@@ -761,9 +608,6 @@ class AudioEngine {
     }
   }
 
-  /**
-   * Apply bitcrusher effect
-   */
   private applyBitcrusher(leftChannel: Float32Array, rightChannel: Float32Array, bitDepth: number) {
     const length = leftChannel.length;
     const step = Math.pow(2, bitDepth - 1);
@@ -826,9 +670,6 @@ class AudioEngine {
     }
   }
 
-  /**
-   * Play the generated kick
-   */
   play(): void {
     if (!this.audioContext || !this.kickBuffer) return;
     
@@ -864,9 +705,6 @@ class AudioEngine {
     this.startVisualization();
   }
 
-  /**
-   * Stop playback
-   */
   stopPlayback(): void {
     if (this.source) {
       this.source.stop();
@@ -878,9 +716,6 @@ class AudioEngine {
     this.stopVisualization();
   }
 
-  /**
-   * Start the visualization loop
-   */
   private startVisualization(): void {
     if (this.requestId) {
       cancelAnimationFrame(this.requestId);
@@ -930,9 +765,6 @@ class AudioEngine {
     updateVisualization();
   }
 
-  /**
-   * Stop the visualization loop
-   */
   private stopVisualization(): void {
     if (this.requestId) {
       cancelAnimationFrame(this.requestId);
@@ -940,30 +772,18 @@ class AudioEngine {
     }
   }
 
-  /**
-   * Get the current audio buffer
-   */
   getAudioBuffer(): AudioBuffer | null {
     return this.kickBuffer;
   }
 
-  /**
-   * Get the audio context
-   */
   getAudioContext(): AudioContext | null {
     return this.audioContext;
   }
 
-  /**
-   * Check if the audio engine is initialized
-   */
   isInitialized(): boolean {
     return this.audioContext !== null;
   }
 
-  /**
-   * Clean up resources
-   */
   dispose(): void {
     this.stopPlayback();
     
