@@ -87,7 +87,7 @@ const KickGeneratorApp: React.FC = () => {
                       <KickTypeSelector />
                     </div>
                     <div className="mb-8">
-                      <h3 className="text-2xl font-bold mb-4 text-neon-pink">TRANSPORT</h3>
+                      <h3 className="text-2xl font-bold mb-4 text-neon-pink">PLAYBACK CONTROLS</h3>
                       <TransportControls />
                     </div>
                   </div>
