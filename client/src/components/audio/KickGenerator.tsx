@@ -32,6 +32,7 @@ export const KickGeneratorContext = React.createContext<{
   savePreset: (name: string) => void;
   loadPreset: (preset: KickPreset) => void;
   createNewPreset: () => void;
+  randomizeParameters: () => void;
   availableKeys: KeyOption[];
   availablePresets: KickPreset[];
   playbackState: AudioPlaybackState;
@@ -56,6 +57,7 @@ export const KickGeneratorContext = React.createContext<{
   savePreset: () => {},
   loadPreset: () => {},
   createNewPreset: () => {},
+  randomizeParameters: () => {},
   availableKeys: AVAILABLE_KEYS,
   availablePresets: DEFAULT_PRESETS,
   playbackState: { isPlaying: false, progress: 0, bpm: 150 },
@@ -322,6 +324,83 @@ export const KickGenerator: React.FC<KickGeneratorProps> = ({
     });
   }, [currentPreset]);
   
+  // Function to randomize all parameters
+  const randomizeParameters = useCallback(() => {
+    const kickTypes: KickType[] = ['gated', 'euphoric', 'zaag', 'reverse'];
+    const randomType = kickTypes[Math.floor(Math.random() * kickTypes.length)];
+    const randomKey = AVAILABLE_KEYS[Math.floor(Math.random() * AVAILABLE_KEYS.length)];
+    
+    // Create random parameters
+    const randomParams: KickParameters = {
+      click: {
+        enabled: Math.random() > 0.3, // 70% chance of being enabled
+        amount: Math.random() * 100,
+        tone: Math.random() * 100
+      },
+      pitch: {
+        start: Math.random() * 100,
+        time: Math.random() * 100
+      },
+      adsr: {
+        attack: Math.random() * 50,
+        decay: 20 + Math.random() * 80,
+        sustain: Math.random() * 80,
+        release: 20 + Math.random() * 80
+      },
+      sub: {
+        enabled: Math.random() > 0.3, // 70% chance of being enabled
+        amount: Math.random() * 100
+      },
+      distortion: {
+        type: randomType,
+        amount: 30 + Math.random() * 70, // More likely to have good amount of distortion
+        drive: 30 + Math.random() * 70
+      },
+      eq: {
+        low: Math.random() * 12 - 6, // -6 to +6 dB
+        mid: Math.random() * 12 - 6,
+        high: Math.random() * 12 - 6
+      },
+      effects: {
+        saturation: Math.random() * 100,
+        reverb: Math.random() * 100,
+        bitcrush: Math.random() * 100
+      }
+    };
+    
+    // Set random preset
+    const randomPreset: KickPreset = {
+      id: undefined,
+      name: "Random Kick",
+      type: randomType,
+      key: randomKey.value,
+      parameters: randomParams
+    };
+    
+    // Store current preset as B for comparison
+    setComparisonPresets(prev => ({
+      A: randomPreset,
+      B: currentPreset
+    }));
+    
+    setCurrentPreset(randomPreset);
+    setActiveComparison('A');
+    
+    toast({
+      title: "Random Kick Generated",
+      description: "Created a random kick preset. If you like it, save it!"
+    });
+    
+    // Optional: Play the random kick
+    if (!playbackState.isPlaying) {
+      setTimeout(() => {
+        audioEngine.play();
+        setPlaybackState(prev => ({ ...prev, isPlaying: true }));
+      }, 200); // Short delay to allow the kick to be generated
+    }
+    
+  }, [currentPreset, playbackState.isPlaying]);
+  
   // Download WAV
   const downloadWav = useCallback(() => {
     const audioBuffer = audioEngine.getAudioBuffer();
@@ -383,6 +462,7 @@ export const KickGenerator: React.FC<KickGeneratorProps> = ({
     savePreset,
     loadPreset,
     createNewPreset,
+    randomizeParameters,
     availableKeys: AVAILABLE_KEYS,
     availablePresets: DEFAULT_PRESETS,
     playbackState,

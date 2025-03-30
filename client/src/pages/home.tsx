@@ -5,6 +5,7 @@ import KickTypeSelector from '@/components/ui/kick-type-selector';
 import LayerControls from '@/components/ui/layer-controls';
 import WaveformDisplay from '@/components/ui/waveform-display';
 import AudioMeters from '@/components/ui/audio-meters';
+import { NavMenu } from '@/components/ui/nav-menu';
 import { KickGenerator, useKickGenerator } from '@/components/audio/KickGenerator';
 import { PresetsProvider, UIProvider } from '@/lib/context';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -67,6 +68,7 @@ const KickGeneratorApp: React.FC = () => {
       <UIProvider>
         <KickGenerator onVisualizationUpdate={handleVisualizationUpdate}>
           <div className="min-h-screen bg-black text-white effect-scanlines">
+            <NavMenu />
             <div className="container mx-auto px-4 py-8">
               {/* Header */}
               <header className="mb-12 text-center effect-flicker">

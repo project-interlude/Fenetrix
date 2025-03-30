@@ -6,7 +6,8 @@ import {
   Download,
   Plus,
   ChevronDown, 
-  Save
+  Save,
+  Dices
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useKickGenerator } from '@/components/audio/KickGenerator';
@@ -42,7 +43,8 @@ export const TransportControls: React.FC = () => {
     loadPreset,
     createNewPreset,
     availablePresets,
-    savePreset
+    savePreset,
+    randomizeParameters
   } = useKickGenerator();
   
   const { 
@@ -158,6 +160,16 @@ export const TransportControls: React.FC = () => {
         >
           <Plus className="h-4 w-4 mr-1" />
           New
+        </Button>
+        
+        <Button
+          variant="default"
+          size="sm"
+          className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-400 hover:from-green-600 hover:to-green-500 text-black rounded-md flex items-center text-sm font-medium shadow-lg hover:shadow-green-500/30"
+          onClick={randomizeParameters}
+        >
+          <Dices className="h-4 w-4 mr-1" />
+          Randomize
         </Button>
         
         <DropdownMenu open={isPresetMenuOpen} onOpenChange={setPresetMenuOpen}>
