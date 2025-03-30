@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Montserrat:wght@500;600;700&family=Roboto+Mono&display=swap" rel="stylesheet">
+    <title>Hardstyle Kick Generator</title>
+    <style>
+      :root {
+        --background: 0 0% 7%;
+        --foreground: 0 0% 98%;
+        --card: 0 0% 12%;
+        --card-foreground: 0 0% 98%;
+        --popover: 0 0% 12%;
+        --popover-foreground: 0 0% 98%;
+        --primary: 265 95% 46%;
+        --primary-foreground: 0 0% 100%;
+        --primary-light: 263 62% 65%;
+        --primary-dark: 272 69% 32%;
+        --secondary: 142 100% 45%;
+        --secondary-foreground: 0 0% 0%;
+        --secondary-light: 151 94% 69%;
+        --secondary-dark: 149 100% 39%;
+        --muted: 0 0% 15%;
+        --muted-foreground: 0 0% 63.9%;
+        --accent: 336 100% 50%;
+        --accent-foreground: 0 0% 98%;
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 0 0% 14.9%;
+        --input: 0 0% 14.9%;
+        --ring: 265 95% 46%;
+        --radius: 0.5rem;
+        
+        --background-dark: 0 0% 7%;
+        --background-surface1: 0 0% 12%;
+        --background-surface2: 0 0% 18%;
+      }
+      
+      /* Custom Styles for Audio Components */
+      .slider-track {
+        height: 4px;
+        background: #3d3d3d;
+        border-radius: 2px;
+      }
+      
+      .slider-thumb {
+        width: 16px;
+        height: 16px;
+        background: #6200ea;
+        border-radius: 50%;
+        cursor: pointer;
+        border: 2px solid #7c4dff;
+      }
+      
+      .slider-thumb:hover {
+        background: #7c4dff;
+      }
+      
+      .waveform-container {
+        position: relative;
+        height: 160px;
+        background: #1e1e1e;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      
+      .spectrum-container {
+        position: relative;
+        height: 160px;
+        background: #1e1e1e;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-background text-foreground">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
