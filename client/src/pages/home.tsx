@@ -1,62 +1,43 @@
 import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
 import TransportControls from "@/components/ui/transport-controls";
 import KickTypeSelector from "@/components/ui/kick-type-selector";
 import LayerControls from "@/components/ui/layer-controls";
 import WaveformDisplay from "@/components/ui/waveform-display";
 import AudioMeters from "@/components/ui/audio-meters";
 import { NavMenu } from "@/components/ui/nav-menu";
-import {
-  KickGenerator,
-  useKickGenerator,
-} from "@/components/audio/KickGenerator";
+import { KickGenerator, useKickGenerator } from "@/components/audio/KickGenerator";
 import { PresetsProvider, UIProvider } from "@/lib/context";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const ABComparison: React.FC = () => {
-  const { activeComparison, setActiveComparison, comparisonPresets } =
-    useKickGenerator();
+  const { activeComparison, setActiveComparison, comparisonPresets } = useKickGenerator();
 
   return (
-    <div className="box-brutalist border-glow">
-      <h2 className="text-3xl font-black mb-6 text-neon-blue uppercase">
-        A/B COMPARISON
-      </h2>
-
-      <div className="flex gap-4">
-        <Button
-          variant={activeComparison === "A" ? "default" : "secondary"}
-          className={`flex-1 py-4 text-xl ${activeComparison === "A" ? "bg-[#00ff41] text-black border-[#00ff41]" : "bg-black hover:bg-gray-900 text-[#00ff41] border-[#00ff41]"} font-black uppercase tracking-widest`}
-          onClick={() => setActiveComparison("A")}
-        >
-          A (CURRENT)
-        </Button>
-
-        <Button
-          variant={activeComparison === "B" ? "default" : "secondary"}
-          className={`flex-1 py-4 text-xl ${activeComparison === "B" ? "bg-[#ff00ff] text-black border-[#ff00ff]" : "bg-black hover:bg-gray-900 text-[#ff00ff] border-[#ff00ff]"} font-black uppercase tracking-widest`}
-          onClick={() => setActiveComparison("B")}
-          disabled={!comparisonPresets.B}
-        >
-          B (PREVIOUS)
-        </Button>
-      </div>
-
-      <div className="mt-6 text-lg font-mono text-white opacity-70">
-        COMPARE KICK VARIANTS WITH A/B TESTING SYSTEM
-      </div>
+    <div className="flex items-center gap-1 bg-[#0a0a0a] p-1 border border-[#222]">
+      <button
+        className={`px-4 py-1 font-mono text-xs font-bold tracking-widest transition-colors ${
+          activeComparison === "A" ? "bg-[#ff3300] text-black" : "text-[#555] hover:text-white"
+        }`}
+        onClick={() => setActiveComparison("A")}
+      >
+        [A]
+      </button>
+      <button
+        className={`px-4 py-1 font-mono text-xs font-bold tracking-widest transition-colors ${
+          activeComparison === "B" ? "bg-[#ff3300] text-black" : "text-[#555] hover:text-white"
+        } ${!comparisonPresets.B ? "opacity-20 cursor-not-allowed" : ""}`}
+        onClick={() => setActiveComparison("B")}
+        disabled={!comparisonPresets.B}
+      >
+        [B]
+      </button>
     </div>
   );
 };
 
 const KickGeneratorApp: React.FC = () => {
-  // Visualization data state
   const [waveformData, setWaveformData] = useState<Float32Array | undefined>();
   const [fftData, setFftData] = useState<Float32Array | undefined>();
-  const [rms, setRMS] = useState(0);
-  const [peak, setPeak] = useState(0);
 
-  // Handle visualization updates from audio engine
   const handleVisualizationUpdate = (
     waveform: Float32Array,
     fft: Float32Array,
@@ -65,110 +46,102 @@ const KickGeneratorApp: React.FC = () => {
   ) => {
     setWaveformData(waveform);
     setFftData(fft);
-    setRMS(rmsDb);
-    setPeak(peakDb);
   };
 
   return (
     <PresetsProvider>
       <UIProvider>
         <KickGenerator onVisualizationUpdate={handleVisualizationUpdate}>
-          <div className="min-h-screen bg-black text-white effect-scanlines">
-            <NavMenu />
-            <div className="container mx-auto px-4 py-8">
-              {/* Header */}
-              <header className="mb-12 text-center effect-flicker">
-                <h1 className="text-5xl md:text-6xl font-black mb-4 text-neon-green tracking-wider">
-                  HARDSTYLE KICK GENERATOR
-                </h1>
-                <p className="text-2xl font-mono tracking-wide text-white opacity-80">
-                  CREATE EXTREME KICKS // DESTROY SOUND SYSTEMS
-                </p>
-              </header>
+          <div className="min-h-screen bg-[#050505] flex flex-col items-center p-4 sm:p-8 font-sans">
+            
+            <div className="w-full max-w-[1400px] mb-6 flex justify-between items-center px-2">
+               <NavMenu />
+            </div>
 
-              {/* Main Content Container */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-full">
-                {/* Left Column - Controls */}
-                <div className="space-y-8">
-                  <div className="box-brutalist border-glow">
-                    <h2 className="text-3xl font-black mb-6 text-neon-red uppercase">
-                      KICK SETTINGS
-                    </h2>
-                    <div className="mb-8">
-                      <h3 className="text-2xl font-bold mb-4 text-neon-green">
-                        KICK TYPE
-                      </h3>
-                      <KickTypeSelector />
-                    </div>
-                    <div className="mb-8">
-                      <h3 className="text-2xl font-bold mb-4 text-neon-pink">
-                        PLAYBACK CONTROLS
-                      </h3>
-                      <TransportControls />
-                    </div>
+            {/* Hardware Chassis */}
+            <div className="w-full max-w-[1400px] hardware-panel flex flex-col">
+              
+              {/* Chassis Header */}
+              <div className="bg-[#0a0a0a] border-b border-[#222] p-4 md:px-8 flex flex-col md:flex-row justify-between items-center gap-6 relative">
+                {/* Faux Screws */}
+                <div className="absolute top-2 left-2 text-[#222] text-[10px] font-mono">+</div>
+                <div className="absolute top-2 right-2 text-[#222] text-[10px] font-mono">+</div>
+                
+                <div className="flex items-center gap-6">
+                  <h1 className="text-3xl font-black tracking-tighter text-white uppercase">
+                    Fenetrix
+                  </h1>
+                  <div className="h-8 w-px bg-[#222] hidden md:block"></div>
+                  <span className="font-mono text-xs tracking-[0.3em] text-[#ff3300]">
+                    KICK SYNTHESIZER
+                  </span>
+                </div>
+                
+                <div className="flex items-center gap-8">
+                  <div className="flex flex-col items-end gap-2">
+                    <span className="text-[9px] font-mono text-[#555] uppercase tracking-[0.2em]">Compare</span>
+                    <ABComparison />
+                  </div>
+                  <TransportControls />
+                </div>
+              </div>
+
+              {/* Chassis Body */}
+              <div className="p-4 grid grid-cols-1 xl:grid-cols-12 gap-4 bg-[#0f0f0f]">
+                
+                {/* Left Column (Controls) */}
+                <div className="xl:col-span-8 flex flex-col gap-4">
+                  {/* Algorithm Module */}
+                  <div className="hardware-module">
+                    <span className="module-title">I. Algorithm Selection</span>
+                    <KickTypeSelector />
                   </div>
 
-                  <div className="box-brutalist border-glow">
-                    <h2 className="text-3xl font-black mb-6 text-neon-blue uppercase">
-                      SOUND DESIGN
-                    </h2>
+                  {/* Sound Design Module */}
+                  <div className="hardware-module flex-1">
+                    <span className="module-title">II. Core Parameters</span>
                     <LayerControls />
                   </div>
                 </div>
 
-                {/* Right Column - Visualizations */}
-                <div className="space-y-8">
-                  <div className="box-brutalist border-glow">
-                    <h2 className="text-3xl font-black mb-6 text-neon-green uppercase">
-                      VISUALIZATION
-                    </h2>
-                    <Tabs defaultValue="waveform">
-                      <TabsList className="w-full mb-6 bg-black border-2 border-[#00ff41] overflow-hidden">
-                        <TabsTrigger
-                          value="waveform"
-                          className="flex-1 text-xl font-black uppercase data-[state=active]:bg-[#00ff41] data-[state=active]:text-black"
-                        >
-                          WAVEFORM
-                        </TabsTrigger>
-                        <TabsTrigger
-                          value="spectrum"
-                          className="flex-1 text-xl font-black uppercase data-[state=active]:bg-[#00ff41] data-[state=active]:text-black"
-                        >
-                          SPECTRUM
-                        </TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="waveform" className="h-48">
-                        <WaveformDisplay
-                          waveformData={waveformData}
-                          fftData={undefined}
-                        />
-                      </TabsContent>
-                      <TabsContent value="spectrum" className="h-48">
-                        <WaveformDisplay
-                          waveformData={undefined}
-                          fftData={fftData}
-                        />
-                      </TabsContent>
-                    </Tabs>
-                    <div className="mt-6">
-                      <AudioMeters />
+                {/* Right Column (Visuals & Output) */}
+                <div className="xl:col-span-4 flex flex-col gap-4">
+                  {/* Oscilloscope */}
+                  <div className="hardware-module">
+                    <span className="module-title">III. Oscilloscope</span>
+                    <div className="bg-[#050505] border border-[#222] p-2 h-48 relative">
+                      <WaveformDisplay waveformData={waveformData} fftData={undefined} />
+                      <div className="absolute top-2 right-2 font-mono text-[9px] text-[#ff3300] tracking-widest">WAV</div>
                     </div>
                   </div>
 
-                  <ABComparison />
-                </div>
-              </div>
+                  {/* Spectrum Analyzer */}
+                  <div className="hardware-module">
+                    <span className="module-title">IV. Spectrum</span>
+                    <div className="bg-[#050505] border border-[#222] p-2 h-48 relative">
+                      <WaveformDisplay waveformData={undefined} fftData={fftData} />
+                      <div className="absolute top-2 right-2 font-mono text-[9px] text-[#ff3300] tracking-widest">FFT</div>
+                    </div>
+                  </div>
 
-              {/* Footer */}
-              <footer className="mt-16 text-lg font-mono text-center effect-flicker">
-                <p className="text-neon-green">
-                  EXTREME HARDSTYLE KICK GENERATOR V0.2
-                </p>
-                <p className="text-white opacity-50 mt-2">
-                  POWERED BY WUNDERKIND
-                </p>
-              </footer>
+                  {/* Output Stage */}
+                  <div className="hardware-module flex-1">
+                    <span className="module-title">V. Output Stage</span>
+                    <div className="h-full min-h-[150px] flex items-center justify-center pt-4">
+                      <AudioMeters />
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+              
+              {/* Footer / Branding */}
+              <div className="bg-[#050505] border-t border-[#222] px-6 py-3 flex justify-between items-center font-mono text-[10px] text-[#444] uppercase tracking-[0.3em]">
+                <span>SEQ. 001 // SYSTEM ACTIVE</span>
+                <span className="text-white/40">PROJECT INTERLUDE</span>
+              </div>
             </div>
+
           </div>
         </KickGenerator>
       </UIProvider>
