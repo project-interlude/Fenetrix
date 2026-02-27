@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fenetrix | Hardstyle Kick Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base: #050505;
+      --bg-panel: #0f0f0f;
+      --bg-module: #121212;
+      --border-color: #222;
+      --accent: #ff3300;
+      --text-main: #ccc;
+      --text-muted: #555;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+    }
+
+    .hardware-chassis {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      width: 100%;
+      max-width: 1200px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chassis-header {
+      background: #0a0a0a;
+      border-bottom: 1px solid var(--border-color);
+      padding: 1.5rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+    }
+
+    .screw {
+      position: absolute;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+    }
+    .screw-tl { top: 8px; left: 8px; }
+    .screw-tr { top: 8px; right: 8px; }
+
+    .brand h1 {
+      font-weight: 800;
+      font-size: 2rem;
+      text-transform: uppercase;
+      letter-spacing: -1px;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .brand span {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.3em;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .controls-top { display: flex; gap: 1rem; }
+    
+    button {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      transition: all 0.1s;
+    }
+    button:hover {
+      border-color: var(--text-muted);
+      color: white;
+    }
+    button.primary {
+      background: var(--accent);
+      color: black;
+      border-color: var(--accent);
+      box-shadow: 0 0 15px rgba(255,51,0,0.3);
+    }
+    button.primary:hover {
+      background: #ff5500;
+    }
+
+    .chassis-body {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 1rem;
+      padding: 1.5rem;
+    }
+
+    .module {
+      background: var(--bg-module);
+      border: 1px solid #1f1f1f;
+      padding: 1.5rem;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+    }
+
+    .module-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Algorithm Selector */
+    .type-selector {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .type-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 1rem;
+      text-align: left;
+    }
+    .type-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: black;
+      box-shadow: 0 0 15px rgba(255,51,0,0.3);
+    }
+    .type-btn .desc {
+      font-size: 0.6rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+    .type-btn.active .desc { color: rgba(0,0,0,0.7); }
+
+    /* Sliders */
+    .param-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+    }
+    .param-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .param-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      display: flex;
+      justify-content: space-between;
+    }
+    .param-val { color: var(--accent); }
+    
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: transparent;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 20px;
+      width: 10px;
+      background: var(--text-main);
+      cursor: pointer;
+      margin-top: -8px;
+      border-radius: 0;
+    }
+    input[type=range]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 4px;
+      cursor: pointer;
+      background: var(--border-color);
+    }
+    input[type=range]:focus { outline: none; }
+    input[type=range]:active::-webkit-slider-thumb { background: var(--accent); }
+
+    /* Visualizers */
+    .screen {
+      background: #000;
+      border: 1px solid var(--border-color);
+      height: 140px;
+      width: 100%;
+      position: relative;
+      margin-bottom: 1rem;
+    }
+    canvas { width: 100%; height: 100%; display: block; }
+    .screen-label {
+      position: absolute;
+      top: 5px; right: 5px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+    }
+
+    .footer {
+      background: var(--bg-base);
+      border-top: 1px solid var(--border-color);
+      padding: 0.75rem 2rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.3em;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    @media (max-width: 900px) {
+      .chassis-body { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="hardware-chassis">
+  <div class="chassis-header">
+    <div class="screw screw-tl">+</div>
+    <div class="screw screw-tr">+</div>
+    <div class="brand">
+      <h1>Fenetrix <span>KICK SYNTHESIZER</span></h1>
+    </div>
+    <div class="controls-top">
+      <button id="btn-random">Randomize</button>
+      <button id="btn-play" class="primary">► Play (Space)</button>
+      <button id="btn-export">↓ WAV</button>
+    </div>
+  </div>
+
+  <div class="chassis-body">
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+      <div class="module">
+        <div class="module-title">I. Algorithm Selection</div>
+        <div class="type-selector">
+          <button class="type-btn active" data-type="gated">
+            TYPE A <span class="desc">Aggressive / Hard</span>
+          </button>
+          <button class="type-btn" data-type="euphoric">
+            TYPE B <span class="desc">Melodic / Clean</span>
+          </button>
+          <button class="type-btn" data-type="zaag">
+            TYPE C <span class="desc">Overdriven / Raw</span>
+          </button>
+          <button class="type-btn" data-type="reverse">
+            TYPE D <span class="desc">Sucking / Swell</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="module flex-1">
+        <div class="module-title">II. Core Parameters</div>
+        <div class="param-grid">
+          <div class="param-group">
+            <div class="param-label"><span>Drive (Distortion)</span><span class="param-val" id="val-drive">60%</span></div>
+            <input type="range" id="param-drive" min="0" max="100" value="60">
+          </div>
+          <div class="param-group">
+            <div class="param-label"><span>Pitch Drop</span><span class="param-val" id="val-pitch">80%</span></div>
+            <input type="range" id="param-pitch" min="0" max="100" value="80">
+          </div>
+          <div class="param-group">
+            <div class="param-label"><span>Tail Length (Decay)</span><span class="param-val" id="val-decay">400ms</span></div>
+            <input type="range" id="param-decay" min="50" max="1000" value="400">
+          </div>
+          <div class="param-group">
+            <div class="param-label"><span>Transient Click</span><span class="param-val" id="val-click">70%</span></div>
+            <input type="range" id="param-click" min="0" max="100" value="70">
+          </div>
+          <div class="param-group">
+            <div class="param-label"><span>Sub Bass</span><span class="param-val" id="val-sub">50%</span></div>
+            <input type="range" id="param-sub" min="0" max="100" value="50">
+          </div>
+          <div class="param-group">
+            <div class="param-label"><span>Fundamental Key</span><span class="param-val" id="val-freq">43.6Hz (F1)</span></div>
+            <input type="range" id="param-freq" min="30" max="65" value="43.6" step="0.1">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+      <div class="module">
+        <div class="module-title">III. Oscilloscope</div>
+        <div class="screen">
+          <div class="screen-label">WAV</div>
+          <canvas id="canvas-wav"></canvas>
+        </div>
+      </div>
+      
+      <div class="module flex-1">
+        <div class="module-title">IV. Spectrum Analyzer</div>
+        <div class="screen">
+          <div class="screen-label">FFT</div>
+          <canvas id="canvas-fft"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>SEQ. 001 // SYSTEM ACTIVE</span>
+    <span style="color: rgba(255,255,255,0.3)">PROJECT INTERLUDE</span>
+  </div>
+</div>
+
+<script>
+// --- DSP ENGINE (Ported from AudioEngine.ts) ---
+const Engine = {
+  ctx: null,
+  analyzer: null,
+  buffer: null,
+  source: null,
+  reqId: null,
+
+  params: {
+    type: 'gated',
+    drive: 60,
+    pitchStart: 80,
+    decay: 400,
+    clickAmount: 70,
+    subAmount: 50,
+    freq: 43.6
+  },
+
+  init() {
+    if (!this.ctx) {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.analyzer = this.ctx.createAnalyser();
+      this.analyzer.fftSize = 2048;
+      this.analyzer.connect(this.ctx.destination);
+    }
+  },
+
+  async generateAndPlay() {
+    this.init();
+    if(this.ctx.state === 'suspended') await this.ctx.resume();
+    
+    const sampleRate = this.ctx.sampleRate;
+    const duration = Math.max(0.6, (50 + this.params.decay + 100) / 1000); // Attack+Decay+Release
+    const numSamples = Math.ceil(duration * sampleRate);
+    
+    this.buffer = this.ctx.createBuffer(2, numSamples, sampleRate);
+    const left = this.buffer.getChannelData(0);
+    const right = this.buffer.getChannelData(1);
+
+    this.processPunch(left, right, numSamples, sampleRate);
+    this.processCrunch(left, right, numSamples, sampleRate);
+
+    // Playback
+    if (this.source) this.source.stop();
+    this.source = this.ctx.createBufferSource();
+    this.source.buffer = this.buffer;
+    this.source.connect(this.analyzer);
+    this.source.start();
+
+    // Visuals
+    if(this.reqId) cancelAnimationFrame(this.reqId);
+    this.drawVisuals();
+  },
+
+  processPunch(left, right, numSamples, sampleRate) {
+    const p = this.params;
+    const attackSamples = Math.floor(10 * sampleRate / 1000); // 10ms attack
+    const decaySamples = Math.floor(p.decay * sampleRate / 1000);
+    const releaseSamples = Math.floor(100 * sampleRate / 1000);
+    const sustainLevel = 0; // Kicks usually drop to 0
+    
+    const baseFreq = p.freq;
+    const startFreq = baseFreq * Math.max(3, p.pitchStart / 5);
+    const pitchEnvSamples = Math.floor(0.15 * sampleRate); // 150ms pitch drop
+    
+    const clickAmount = p.clickAmount / 100;
+    const clickFreq = 4000;
+    const subAmount = p.subAmount / 100;
+
+    let phase = 0, subPhase = 0, clickPhase = 0;
+
+    for (let i = 0; i < numSamples; i++) {
+      // Amp Envelope
+      let amp = 0;
+      if (i < attackSamples) amp = Math.pow(i / attackSamples, 0.8);
+      else if (i < attackSamples + decaySamples) amp = 1.0 - Math.pow((i - attackSamples) / decaySamples, 0.7);
+      else amp = 0;
+
+      // Pitch Envelope
+      let currentFreq = baseFreq;
+      if (i < pitchEnvSamples) {
+        currentFreq = startFreq - (startFreq - baseFreq) * Math.pow(i / pitchEnvSamples, 0.5);
+      }
+
+      phase += currentFreq / sampleRate * 2 * Math.PI;
+      subPhase += (currentFreq / 2) / sampleRate * 2 * Math.PI;
+      clickPhase += clickFreq / sampleRate * 2 * Math.PI;
+
+      // Click Envelopes
+      let clickEnv = i < sampleRate * 0.005 
+        ? clickAmount * Math.exp(-i / (sampleRate * 0.002))
+        : clickAmount * 0.7 * Math.exp(-(i - sampleRate * 0.005) / (sampleRate * 0.01));
+
+      // Oscillators
+      const sine = Math.tanh(1.2 * Math.sin(phase));
+      const sub = Math.sin(subPhase) * subAmount * (1 + 0.05 * Math.sin(subPhase * 1.5));
+      const click = ((Math.random()*2-1)*0.3 + Math.sin(clickPhase)*0.7) * clickEnv;
+
+      const sample = (Math.tanh(sine * 1.5) * 0.8 * 0.6 + sub * 0.4) * amp + click;
+      const compressed = Math.tanh(sample * 1.2) * 0.9;
+
+      left[i] = compressed;
+      right[i] = compressed;
+    }
+  },
+
+  processCrunch(left, right, numSamples, sampleRate) {
+    const drive = this.params.drive / 100;
+    
+    switch(this.params.type) {
+      case 'gated':
+        const gateInterval = Math.floor(sampleRate / 40);
+        for(let i=0; i<numSamples; i++) {
+          let smp = left[i] * (1 + drive * 10);
+          smp = Math.max(Math.min(smp, 0.4), -0.4); // Hard clip
+          
+          if((i % gateInterval)/gateInterval >= 0.65) smp *= 0.05; // Gate
+          else smp += (Math.random()*2-1)*0.2*drive; // Noise
+          
+          left[i] = right[i] = Math.max(Math.min(smp, 0.95), -0.95);
+        }
+        break;
+
+      case 'euphoric':
+        const delayLen = Math.floor(sampleRate * 0.015);
+        const chorus = new Float32Array(delayLen);
+        let cPhase = 0;
+        
+        for(let i=0; i<numSamples; i++) {
+          let smp = Math.tanh(left[i] * (1 + drive * 1.2) * 0.7);
+          
+          if(i >= delayLen) {
+            cPhase += 2 * Math.PI * 0.5 / sampleRate;
+            const offset = Math.floor(Math.sin(cPhase) * 0.3 * drive * delayLen * 0.5);
+            smp += chorus[(i - delayLen + offset) % delayLen] * 0.5;
+          }
+          
+          chorus[i % delayLen] = smp;
+          left[i] = right[i] = Math.tanh(smp * 0.8);
+        }
+        break;
+
+      case 'zaag':
+        let p1=0, p2=0;
+        for(let i=0; i<numSamples; i++) {
+          let smp = left[i] * (1 + drive * 15);
+          
+          // Foldback
+          while(Math.abs(smp) > 0.3) {
+            if(smp > 0.3) smp = 0.6 - smp;
+            else if(smp < -0.3) smp = -0.6 - smp;
+          }
+
+          // Saw overtones
+          p1 += 2*Math.PI*250/sampleRate;
+          p2 += 2*Math.PI*420/sampleRate;
+          const sawMix = 0.4 * drive;
+          smp += (((p1/(2*Math.PI)%1)*2-1)*0.6 + ((p2/(2*Math.PI)%1)*2-1)*0.4) * sawMix;
+
+          // Bitcrush
+          if(drive > 0.4) smp = Math.round(smp * 64) / 64;
+
+          left[i] = right[i] = Math.max(Math.min(smp, 0.8), -0.8);
+        }
+        break;
+
+      case 'reverse':
+        // Envelope follower approximation
+        const env = new Float32Array(numSamples);
+        let lfo = 0;
+        for(let i=0; i<numSamples; i++) {
+          const revCurve = Math.pow(i/numSamples, 1.2) * (1 - Math.abs(left[i])) + 0.2;
+          
+          lfo += 2*Math.PI*(2.5+drive*6)/sampleRate;
+          const wobble = 0.5 * (1 + Math.pow(Math.abs(Math.sin(lfo)), 0.7)*Math.sign(Math.sin(lfo)));
+          
+          const gain = (1+drive*1.5) * (1 + revCurve * (5+drive*15) * wobble);
+          let smp = left[i] * gain;
+
+          // Asym clip
+          smp = smp > 0 ? 1 - Math.exp(-smp) : -Math.tanh(Math.abs(smp));
+          left[i] = right[i] = Math.tanh(smp);
+        }
+        break;
+    }
+  },
+
+  drawVisuals() {
+    if(!this.analyzer) return;
+
+    const wavCanvas = document.getElementById('canvas-wav');
+    const fftCanvas = document.getElementById('canvas-fft');
+    const wavCtx = wavCanvas.getContext('2d');
+    const fftCtx = fftCanvas.getContext('2d');
+    
+    wavCanvas.width = wavCanvas.clientWidth;
+    wavCanvas.height = wavCanvas.clientHeight;
+    fftCanvas.width = fftCanvas.clientWidth;
+    fftCanvas.height = fftCanvas.clientHeight;
+
+    const bufferLength = this.analyzer.frequencyBinCount;
+    const wavData = new Float32Array(bufferLength);
+    const fftData = new Uint8Array(bufferLength);
+
+    const draw = () => {
+      this.reqId = requestAnimationFrame(draw);
+
+      this.analyzer.getFloatTimeDomainData(wavData);
+      this.analyzer.getByteFrequencyData(fftData);
+
+      // Draw WAV
+      wavCtx.fillStyle = '#050505';
+      wavCtx.fillRect(0, 0, wavCanvas.width, wavCanvas.height);
+      wavCtx.lineWidth = 2;
+      wavCtx.strokeStyle = '#ff3300';
+      wavCtx.beginPath();
+      for(let i = 0; i < bufferLength; i++) {
+        const x = i * (wavCanvas.width / bufferLength);
+        const y = (wavData[i] * 0.5 + 0.5) * wavCanvas.height;
+        if(i === 0) wavCtx.moveTo(x, y);
+        else wavCtx.lineTo(x, y);
+      }
+      wavCtx.stroke();
+
+      // Draw FFT
+      fftCtx.fillStyle = '#050505';
+      fftCtx.fillRect(0, 0, fftCanvas.width, fftCanvas.height);
+      const barWidth = (fftCanvas.width / bufferLength) * 2.5;
+      let x = 0;
+      for(let i = 0; i < bufferLength; i++) {
+        const barHeight = (fftData[i] / 255) * fftCanvas.height;
+        fftCtx.fillStyle = `hsl(12, 100%, ${Math.max(20, (fftData[i]/255)*50)}%)`;
+        fftCtx.fillRect(x, fftCanvas.height - barHeight, barWidth, barHeight);
+        x += barWidth + 1;
+      }
+    };
+    draw();
+  },
+
+  exportWav() {
+    if(!this.buffer) return alert("Generate a kick first!");
+    
+    // Simple WAV encoder
+    const numChannels = 1; // Export mono for simplicity
+    const sampleRate = this.buffer.sampleRate;
+    const data = this.buffer.getChannelData(0);
+    const buffer = new ArrayBuffer(44 + data.length * 2);
+    const view = new DataView(buffer);
+
+    const writeString = (offset, string) => {
+      for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i));
+    };
+
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + data.length * 2, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * numChannels * 2, true);
+    view.setUint16(32, numChannels * 2, true);
+    view.setUint16(34, 16, true);
+    writeString(36, 'data');
+    view.setUint32(40, data.length * 2, true);
+
+    let offset = 44;
+    for (let i = 0; i < data.length; i++, offset += 2) {
+      let s = Math.max(-1, Math.min(1, data[i]));
+      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+
+    const blob = new Blob([view], { type: 'audio/wav' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = `fenetrix-kick-${this.params.type}.wav`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+};
+
+// --- UI BINDINGS ---
+document.querySelectorAll('.type-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+    const target = e.currentTarget;
+    target.classList.add('active');
+    Engine.params.type = target.dataset.type;
+    Engine.generateAndPlay();
+  });
+});
+
+const bindSlider = (id, paramKey, unit = '') => {
+  const slider = document.getElementById(`param-${id}`);
+  const label = document.getElementById(`val-${id}`);
+  slider.addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    label.innerText = val + unit;
+    Engine.params[paramKey] = val;
+  });
+  slider.addEventListener('change', () => Engine.generateAndPlay());
+};
+
+bindSlider('drive', 'drive', '%');
+bindSlider('pitch', 'pitchStart', '%');
+bindSlider('decay', 'decay', 'ms');
+bindSlider('click', 'clickAmount', '%');
+bindSlider('sub', 'subAmount', '%');
+bindSlider('freq', 'freq', 'Hz');
+
+document.getElementById('btn-play').addEventListener('click', () => Engine.generateAndPlay());
+document.getElementById('btn-export').addEventListener('click', () => Engine.exportWav());
+
+document.addEventListener('keydown', (e) => {
+  if(e.code === 'Space') {
+    e.preventDefault();
+    Engine.generateAndPlay();
+  }
+});
+
+// Randomize Feature
+document.getElementById('btn-random').addEventListener('click', () => {
+  const types = ['gated', 'euphoric', 'zaag', 'reverse'];
+  const randomType = types[Math.floor(Math.random() * types.length)];
+  
+  document.querySelectorAll('.type-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.type === randomType);
+  });
+  Engine.params.type = randomType;
+
+  const rParams = [
+    { id: 'drive', key: 'drive', val: Math.floor(30 + Math.random() * 70), unit: '%' },
+    { id: 'pitch', key: 'pitchStart', val: Math.floor(50 + Math.random() * 50), unit: '%' },
+    { id: 'decay', key: 'decay', val: Math.floor(200 + Math.random() * 600), unit: 'ms' },
+    { id: 'click', key: 'clickAmount', val: Math.floor(Math.random() * 100), unit: '%' },
+    { id: 'sub', key: 'subAmount', val: Math.floor(20 + Math.random() * 80), unit: '%' },
+    { id: 'freq', key: 'freq', val: (35 + Math.random() * 25).toFixed(1), unit: 'Hz' }
+  ];
+
+  rParams.forEach(p => {
+    document.getElementById(`param-${p.id}`).value = p.val;
+    document.getElementById(`val-${p.id}`).innerText = p.val + p.unit;
+    Engine.params[p.key] = parseFloat(p.val);
+  });
+
+  Engine.generateAndPlay();
+});
+</script>
+</body>
+</html>

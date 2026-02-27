@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fenelite | Hardstyle Synthesizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base: #020202;
+      --bg-panel: #0a0a0a;
+      --bg-module: #111;
+      --border-color: #333;
+      --accent: #00ffaa;
+      --accent-dim: #004422;
+      --text-main: #eee;
+      --text-muted: #777;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+    }
+
+    .hardware-chassis {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      width: 100%;
+      max-width: 1200px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.05);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .chassis-header {
+      background: #050505;
+      border-bottom: 1px solid var(--border-color);
+      padding: 1.5rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand h1 {
+      font-weight: 800;
+      font-size: 2rem;
+      text-transform: uppercase;
+      letter-spacing: -2px;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .brand span {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.3em;
+      color: var(--accent);
+      font-weight: 700;
+      background: var(--accent-dim);
+      padding: 0.2rem 0.5rem;
+      border-radius: 2px;
+    }
+
+    .controls-top { display: flex; gap: 1rem; }
+    
+    button {
+      background: #111;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      border-radius: 2px;
+      transition: all 0.1s;
+    }
+    button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    button.primary {
+      background: var(--accent);
+      color: black;
+      border-color: var(--accent);
+      box-shadow: 0 0 15px rgba(0, 255, 170, 0.2);
+    }
+    button.primary:hover {
+      background: #00dd99;
+      color: black;
+    }
+
+    .chassis-body {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 1.5rem;
+      padding: 1.5rem;
+    }
+
+    .module {
+      background: var(--bg-module);
+      border: 1px solid #1f1f1f;
+      padding: 1.5rem;
+      border-radius: 4px;
+      box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+    }
+
+    .module-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px dashed var(--border-color);
+    }
+
+    .type-selector {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem;
+    }
+    .type-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 1rem;
+      text-align: left;
+    }
+    .type-btn.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .type-btn .desc {
+      font-size: 0.6rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+    .type-btn.active .desc { color: var(--accent); opacity: 0.8; }
+
+    .param-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+    }
+    .param-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .param-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      display: flex;
+      justify-content: space-between;
+      color: #aaa;
+    }
+    .param-val { color: var(--accent); font-weight: bold; }
+    
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: transparent;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 16px;
+      width: 16px;
+      border-radius: 50%;
+      background: var(--text-main);
+      cursor: pointer;
+      margin-top: -6px;
+      border: 2px solid #000;
+    }
+    input[type=range]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 4px;
+      cursor: pointer;
+      background: var(--border-color);
+      border-radius: 2px;
+    }
+    input[type=range]:focus { outline: none; }
+    input[type=range]:active::-webkit-slider-thumb { background: var(--accent); }
+
+    .screen {
+      background: #020202;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      height: 140px;
+      width: 100%;
+      position: relative;
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+    canvas { width: 100%; height: 100%; display: block; }
+    .screen-label {
+      position: absolute;
+      top: 5px; right: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+      background: rgba(0,0,0,0.8);
+      padding: 2px 4px;
+    }
+
+    .footer {
+      background: #050505;
+      border-top: 1px solid var(--border-color);
+      padding: 0.75rem 2rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.3em;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    @media (max-width: 900px) {
+      .chassis-body { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="hardware-chassis">
+  <div class="chassis-header">
+    <div class="brand">
+      <h1>Fenelite <span>DSP CORE</span></h1>
+    </div>
+    <div class="controls-top">
+      <button id="btn-random">🎲 Random</button>
+      <button id="btn-play" class="primary">► Play (Space)</button>
+      <button id="btn-export">↓ Export WAV</button>
+    </div>
+  </div>
+
+  <div class="chassis-body">
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <div class="module">
+        <div class="module-title">I. Algorithm Mode</div>
+        <div class="type-selector">
+          <button class="type-btn active" data-type="typeA">
+            TYPE A <span class="desc">[HARD CLIP] Aggressive Crunch</span>
+          </button>
+          <button class="type-btn" data-type="typeB">
+            TYPE B <span class="desc">[WARM TUBE] Thick Saturation</span>
+          </button>
+          <button class="type-btn" data-type="typeC">
+            TYPE C <span class="desc">[WAVEFOLD] Extreme Overtones</span>
+          </button>
+          <button class="type-btn" data-type="typeD">
+            TYPE D <span class="desc">[REVERSE SWELL] Driving Tail</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="module flex-1">
+        <div class="module-title">II. Engine Shaping</div>
+        <div class="param-grid">
+          <div class="param-group">
+            <div class="param-label"><span>Drive (Distortion)</span><span class="param-val" id="val-drive">80%</span></div>
+            <input type="range" id="param-drive" min="0" max="100" value="80">
+          </div>
+          <div class="param-group">
+            <div class="param-label"><span>Punch Drop</span><span class="param-val" id="val-punch">85%</span></div>
+            <input type="range" id="param-punch" min="0" max="100" value="85">
+          </div>
+          <div class="param-group">
+            <div class="param-label"><span>Tail Duration</span><span class="param-val" id="val-decay">600ms</span></div>
+            <input type="range" id="param-decay" min="100" max="1500" value="600">
+          </div>
+          <div class="param-group">
+            <div class="param-label"><span>Tail Resonance</span><span class="param-val" id="val-reso">65%</span></div>
+            <input type="range" id="param-reso" min="0" max="100" value="65">
+          </div>
+          <div class="param-group">
+            <div class="param-label"><span>Pure Sub Weight</span><span class="param-val" id="val-sub">75%</span></div>
+            <input type="range" id="param-sub" min="0" max="100" value="75">
+          </div>
+          <div class="param-group">
+            <div class="param-label"><span>Fundamental Key</span><span class="param-val" id="val-freq">43.6Hz (F1)</span></div>
+            <input type="range" id="param-freq" min="30" max="70" value="43.6" step="0.1">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <div class="module">
+        <div class="module-title">III. Oscilloscope</div>
+        <div class="screen">
+          <div class="screen-label">WAVEFORM</div>
+          <canvas id="canvas-wav"></canvas>
+        </div>
+      </div>
+      
+      <div class="module flex-1">
+        <div class="module-title">IV. Spectrum</div>
+        <div class="screen">
+          <div class="screen-label">FFT ANALYZER</div>
+          <canvas id="canvas-fft"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>FENELITE KICK GENERATOR // V1.2.0 (PURE TUNE)</span>
+    <span style="color: rgba(255,255,255,0.3)">PROJECT INTERLUDE</span>
+  </div>
+</div>
+
+<script>
+// --- Note Frequency Converter ---
+function getNoteName(freq) {
+  const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  const midi = Math.round(12 * Math.log2(freq / 440)) + 69;
+  const octave = Math.floor(midi / 12) - 1;
+  return `${notes[midi % 12]}${octave}`;
+}
+
+const Engine = {
+  ctx: null,
+  analyzer: null,
+  buffer: null,
+  source: null,
+  reqId: null,
+
+  params: {
+    type: 'typeA',
+    drive: 80,
+    punch: 85,
+    decay: 600,
+    reso: 65,
+    subAmount: 75,
+    freq: 43.6
+  },
+
+  init() {
+    if (!this.ctx) {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.analyzer = this.ctx.createAnalyser();
+      this.analyzer.fftSize = 2048;
+      this.analyzer.smoothingTimeConstant = 0.8;
+      this.analyzer.connect(this.ctx.destination);
+    }
+  },
+
+  async generateAndPlay() {
+    this.init();
+    if(this.ctx.state === 'suspended') await this.ctx.resume();
+    
+    const sampleRate = this.ctx.sampleRate;
+    const duration = (20 + this.params.decay + 100) / 1000; 
+    const numSamples = Math.ceil(duration * sampleRate);
+    
+    this.buffer = this.ctx.createBuffer(2, numSamples, sampleRate);
+    const left = this.buffer.getChannelData(0);
+    const right = this.buffer.getChannelData(1);
+
+    this.synthesizeKick(left, right, numSamples, sampleRate);
+
+    if (this.source) this.source.stop();
+    this.source = this.ctx.createBufferSource();
+    this.source.buffer = this.buffer;
+    this.source.connect(this.analyzer);
+    this.source.start();
+
+    if(this.reqId) cancelAnimationFrame(this.reqId);
+    this.drawVisuals();
+  },
+
+  synthesizeKick(left, right, numSamples, sampleRate) {
+    const p = this.params;
+    
+    const attackTime = 0.005; 
+    const decayTime = p.decay / 1000;
+    
+    const baseFreq = p.freq;
+    const startFreq = baseFreq + (p.punch * 30); 
+    const pitchDecay = 45; 
+
+    const driveAmount = p.drive / 100;
+    const subVol = p.subAmount / 100;
+    const resoAmount = p.reso / 100;
+
+    let phase = 0;
+    let clickPhase = 0;
+
+    const delayTime = 0.015 + (resoAmount * 0.01); 
+    const delaySamples = Math.floor(sampleRate * delayTime);
+    const delayBuffer = new Float32Array(delaySamples);
+    let delayIdx = 0;
+
+    for (let i = 0; i < numSamples; i++) {
+      const t = i / sampleRate; 
+
+      // 1. ENVELOPE LOGIC (Fixed for Type D reverse swells)
+      let amp = 0;
+      let tailAmp = 0;
+
+      if (t < attackTime) {
+        amp = t / attackTime;
+      } else {
+        amp = Math.exp(-(t - attackTime) * 15); // Core punch dies
+      }
+
+      if (p.type === 'typeD') {
+        // Reverse Swell Envelope (Creates the "Wump")
+        if (t > attackTime + 0.05) { 
+           let swellP = (t - attackTime - 0.05) / decayTime;
+           if (swellP <= 1.0) {
+              tailAmp = Math.pow(swellP, 2.0); // Curves upward strongly
+           } else {
+              tailAmp = Math.max(0, 1 - (t - attackTime - 0.05 - decayTime) * 15); // Quick fade
+           }
+        }
+      } else {
+        // Standard Decay Envelope
+        if (t >= attackTime) tailAmp = Math.exp(-(t - attackTime) * (1 / decayTime));
+        else tailAmp = amp;
+      }
+
+      // 2. PITCH DROP & TOK
+      const currentFreq = baseFreq + (startFreq - baseFreq) * Math.exp(-t * pitchDecay);
+      phase += (currentFreq * Math.PI * 2) / sampleRate;
+
+      clickPhase += (currentFreq * 2.5 * Math.PI * 2) / sampleRate;
+      let tok = Math.sin(clickPhase) * amp * 0.5;
+
+      // 3. CORE OSCILLATOR
+      let coreOsc = Math.sin(phase);
+
+      // 4. DISTORTION ALGORITHMS
+      let mix = coreOsc + tok;
+
+      switch(p.type) {
+        case 'typeA': // HARD CLIP
+          mix = mix * (1 + driveAmount * 15);
+          mix = Math.max(-0.8, Math.min(0.8, mix)); 
+          
+          let combFeedback = delayBuffer[delayIdx] * (0.6 + resoAmount * 0.35);
+          let combIn = mix + combFeedback;
+          delayBuffer[delayIdx] = combIn;
+          
+          mix = (mix * amp) + (combIn * tailAmp * 0.8);
+          delayIdx = (delayIdx + 1) % delaySamples;
+          break;
+
+        case 'typeB': // WARM TUBE
+          mix = mix * (1 + driveAmount * 8);
+          mix = Math.tanh(mix); 
+          
+          let chorus = Math.sin(phase * 0.98) * tailAmp * resoAmount;
+          mix = (mix * amp) + ((mix + chorus) * tailAmp * 0.7);
+          break;
+
+        case 'typeC': // WAVEFOLD
+          mix = mix * (1 + driveAmount * 10);
+          if (Math.abs(mix) > 0.5) mix = Math.sin(mix * 3);
+          
+          let square = Math.sign(Math.sin(phase * 1.5)) * tailAmp * resoAmount * 0.5;
+          mix = (mix * amp) + (mix * tailAmp) + square;
+          break;
+
+        case 'typeD': // REVERSE SWELL
+          mix = mix * (1 + driveAmount * 12);
+          mix = Math.tanh(mix); // Crunch the initial punch
+          
+          // Generate a heavy sub saw for the tail that isn't pitch dropped
+          let sawPhase = (baseFreq * Math.PI * 2 * t) * 0.5; 
+          let saw = (sawPhase / Math.PI) % 2 - 1; 
+          
+          // The tail swells up completely independently from the transient punch
+          mix = (mix * amp) + (saw * tailAmp * (0.5 + resoAmount * 1.0));
+          break;
+      }
+
+      // 5. PERFECTLY TUNED PURE SUB INJECTION
+      // Ensures the perceived key ALWAYS matches the slider, unaffected by phase or pitch drops
+      const pureSubPhase = baseFreq * Math.PI * 2 * t;
+      const pureSub = Math.sin(pureSubPhase) * tailAmp * subVol * 1.5;
+      
+      let finalSample = mix + pureSub;
+
+      // 6. MASTER LIMITER
+      finalSample = Math.max(-0.99, Math.min(0.99, Math.tanh(finalSample * 1.2)));
+
+      left[i] = finalSample;
+      right[i] = finalSample;
+    }
+  },
+
+  drawVisuals() {
+    if(!this.analyzer) return;
+
+    const wavCanvas = document.getElementById('canvas-wav');
+    const fftCanvas = document.getElementById('canvas-fft');
+    const wavCtx = wavCanvas.getContext('2d');
+    const fftCtx = fftCanvas.getContext('2d');
+    
+    wavCanvas.width = wavCanvas.clientWidth * window.devicePixelRatio;
+    wavCanvas.height = wavCanvas.clientHeight * window.devicePixelRatio;
+    fftCanvas.width = fftCanvas.clientWidth * window.devicePixelRatio;
+    fftCanvas.height = fftCanvas.clientHeight * window.devicePixelRatio;
+
+    const bufferLength = this.analyzer.frequencyBinCount;
+    const wavData = new Float32Array(bufferLength);
+    const fftData = new Uint8Array(bufferLength);
+
+    const draw = () => {
+      this.reqId = requestAnimationFrame(draw);
+
+      this.analyzer.getFloatTimeDomainData(wavData);
+      this.analyzer.getByteFrequencyData(fftData);
+
+      wavCtx.fillStyle = '#020202';
+      wavCtx.fillRect(0, 0, wavCanvas.width, wavCanvas.height);
+      wavCtx.lineWidth = 3;
+      wavCtx.strokeStyle = '#00ffaa';
+      
+      wavCtx.beginPath();
+      for(let i = 0; i < bufferLength; i++) {
+        const x = i * (wavCanvas.width / bufferLength);
+        const y = (wavData[i] * 0.8 + 0.5) * wavCanvas.height;
+        if(i === 0) wavCtx.moveTo(x, y);
+        else wavCtx.lineTo(x, y);
+      }
+      wavCtx.stroke();
+
+      fftCtx.fillStyle = '#020202';
+      fftCtx.fillRect(0, 0, fftCanvas.width, fftCanvas.height);
+      const barWidth = (fftCanvas.width / bufferLength) * 2.5;
+      let x = 0;
+      
+      for(let i = 0; i < bufferLength; i++) {
+        const barHeight = (fftData[i] / 255) * fftCanvas.height;
+        fftCtx.fillStyle = `rgb(0, ${Math.max(50, fftData[i])}, ${Math.max(30, fftData[i]*0.6)})`;
+        fftCtx.fillRect(x, fftCanvas.height - barHeight, barWidth, barHeight);
+        x += barWidth + 1;
+      }
+    };
+    draw();
+  },
+
+  exportWav() {
+    if(!this.buffer) return alert("Press play to generate a kick first!");
+    
+    const numChannels = 1; 
+    const sampleRate = this.buffer.sampleRate;
+    const data = this.buffer.getChannelData(0);
+    const buffer = new ArrayBuffer(44 + data.length * 2);
+    const view = new DataView(buffer);
+
+    const writeString = (offset, string) => {
+      for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i));
+    };
+
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + data.length * 2, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * numChannels * 2, true);
+    view.setUint16(32, numChannels * 2, true);
+    view.setUint16(34, 16, true);
+    writeString(36, 'data');
+    view.setUint32(40, data.length * 2, true);
+
+    let offset = 44;
+    for (let i = 0; i < data.length; i++, offset += 2) {
+      let s = Math.max(-1, Math.min(1, data[i]));
+      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+
+    const blob = new Blob([view], { type: 'audio/wav' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = `fenelite-${this.params.type}-kick.wav`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+};
+
+document.querySelectorAll('.type-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+    const target = e.currentTarget;
+    target.classList.add('active');
+    Engine.params.type = target.dataset.type;
+    Engine.generateAndPlay();
+  });
+});
+
+const bindSlider = (id, paramKey, unit = '', useNote = false) => {
+  const slider = document.getElementById(`param-${id}`);
+  const label = document.getElementById(`val-${id}`);
+  
+  // Initialize with correct note on page load if needed
+  if (useNote) {
+     label.innerText = slider.value + unit + ' (' + getNoteName(parseFloat(slider.value)) + ')';
+  }
+
+  slider.addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    if (useNote) {
+      label.innerText = val + unit + ' (' + getNoteName(val) + ')';
+    } else {
+      label.innerText = val + unit;
+    }
+    Engine.params[paramKey] = val;
+  });
+  slider.addEventListener('change', () => Engine.generateAndPlay());
+};
+
+bindSlider('drive', 'drive', '%');
+bindSlider('punch', 'punch', '%');
+bindSlider('decay', 'decay', 'ms');
+bindSlider('reso', 'reso', '%');
+bindSlider('sub', 'subAmount', '%');
+bindSlider('freq', 'freq', 'Hz', true);
+
+document.getElementById('btn-play').addEventListener('click', () => Engine.generateAndPlay());
+document.getElementById('btn-export').addEventListener('click', () => Engine.exportWav());
+
+document.addEventListener('keydown', (e) => {
+  if(e.code === 'Space' && e.target.tagName !== 'BUTTON') {
+    e.preventDefault();
+    Engine.generateAndPlay();
+  }
+});
+
+document.getElementById('btn-random').addEventListener('click', () => {
+  const types = ['typeA', 'typeB', 'typeC', 'typeD'];
+  const randomType = types[Math.floor(Math.random() * types.length)];
+  
+  document.querySelectorAll('.type-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.type === randomType);
+  });
+  Engine.params.type = randomType;
+
+  const rParams = [
+    { id: 'drive', key: 'drive', val: Math.floor(60 + Math.random() * 40), unit: '%' },
+    { id: 'punch', key: 'punch', val: Math.floor(60 + Math.random() * 40), unit: '%' },
+    { id: 'decay', key: 'decay', val: Math.floor(400 + Math.random() * 800), unit: 'ms' },
+    { id: 'reso', key: 'reso', val: Math.floor(40 + Math.random() * 60), unit: '%' },
+    { id: 'sub', key: 'subAmount', val: Math.floor(60 + Math.random() * 40), unit: '%' },
+    { id: 'freq', key: 'freq', val: (40 + Math.random() * 15).toFixed(1), unit: 'Hz', useNote: true }
+  ];
+
+  rParams.forEach(p => {
+    const slider = document.getElementById(`param-${p.id}`);
+    const label = document.getElementById(`val-${p.id}`);
+    
+    slider.value = p.val;
+    if (p.useNote) {
+       label.innerText = p.val + p.unit + ' (' + getNoteName(parseFloat(p.val)) + ')';
+    } else {
+       label.innerText = p.val + p.unit;
+    }
+    Engine.params[p.key] = parseFloat(p.val);
+  });
+
+  Engine.generateAndPlay();
+});
+
+// Init on load
+document.getElementById('val-freq').innerText = 
+  document.getElementById('param-freq').value + 'Hz (' + 
+  getNoteName(parseFloat(document.getElementById('param-freq').value)) + ')';
+
+</script>
+</body>
+</html>
