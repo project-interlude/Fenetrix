@@ -1,7 +1,7 @@
-# FENETRIX // HARDSTYLE KICK SYNTHESIZER
+# FENETRIX // HARDSTYLE INSPIRED KICK SYNTHESIZER
 **A Project Interlude Audio DSP Application**
 
-Fenetrix is a brutal, web-based Hardstyle Kick Generator designed with a dark, industrial hardware aesthetic. It operates directly in your browser using the Web Audio API, allowing you to synthesize kicks with uncompromising distortion, precision EQ, and deep sub-bass manipulation. 
+Fenetrix is a brutal, web-based Kick Generator designed with a dark, industrial hardware aesthetic. It operates directly in your browser using the Web Audio API, allowing you to synthesize kicks with uncompromising distortion, precision EQ, and deep sub-bass manipulation. 
 
 ## 🎛️ Features
 
