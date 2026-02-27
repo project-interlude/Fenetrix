@@ -1,0 +1,1964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fenelite PRO | Hardstyle Kick Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Barlow+Condensed:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080808;
+  --bg1: #0d0d0d;
+  --bg2: #121212;
+  --bg3: #181818;
+  --border: #252525;
+  --border2: #333;
+  --accent: #ff3c00;
+  --accent2: #ff7a00;
+  --accent3: #ffcc00;
+  --green: #00ff88;
+  --blue: #0088ff;
+  --purple: #aa44ff;
+  --text: #e8e8e8;
+  --muted: #666;
+  --muted2: #444;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{font-size:13px}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Barlow Condensed',sans-serif;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* SCANLINE OVERLAY */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);
+}
+
+/* ── LAYOUT ────────────────────────────────────── */
+.app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 16px;height:48px;
+  background:var(--bg1);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+  gap:12px;
+}
+.logo{
+  font-family:'Space Mono',monospace;font-weight:700;font-size:1.1rem;
+  letter-spacing:-0.04em;color:#fff;white-space:nowrap;
+  display:flex;align-items:center;gap:8px;
+}
+.logo em{
+  font-style:normal;color:var(--accent);
+  font-size:0.65rem;letter-spacing:0.2em;
+  border:1px solid var(--accent);padding:1px 5px;border-radius:2px;
+}
+.topbar-center{display:flex;align-items:center;gap:6px;flex:1;justify-content:center;overflow:auto}
+.topbar-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
+
+.main{display:flex;flex:1;overflow:hidden}
+
+/* ── SIDEBAR ───────────────────────────────────── */
+.sidebar{
+  width:220px;flex-shrink:0;
+  background:var(--bg1);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+.sidebar-section{
+  border-bottom:1px solid var(--border);
+  padding:10px;
+}
+.sidebar-title{
+  font-size:0.65rem;letter-spacing:0.25em;text-transform:uppercase;
+  color:var(--muted);font-family:'Space Mono',monospace;
+  margin-bottom:8px;
+}
+
+/* Preset list */
+.preset-list{overflow-y:auto;flex:1;padding:4px}
+.preset-item{
+  padding:7px 10px;cursor:pointer;border-radius:3px;
+  font-size:0.85rem;letter-spacing:0.02em;
+  display:flex;justify-content:space-between;align-items:center;
+  color:#aaa;transition:all 0.1s;
+  border:1px solid transparent;
+}
+.preset-item:hover{background:var(--bg3);color:#fff;border-color:var(--border2)}
+.preset-item.active{background:rgba(255,60,0,0.1);color:var(--accent);border-color:rgba(255,60,0,0.3)}
+.preset-item .tag{
+  font-size:0.6rem;font-family:'Space Mono',monospace;
+  color:var(--muted2);letter-spacing:0.1em;
+}
+.preset-item.active .tag{color:var(--accent)}
+
+/* ── CENTER PANEL ──────────────────────────────── */
+.center{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+.center-top{
+  display:flex;gap:0;border-bottom:1px solid var(--border);flex-shrink:0;
+}
+
+/* Tabs */
+.tab{
+  padding:8px 16px;font-size:0.8rem;letter-spacing:0.1em;text-transform:uppercase;
+  cursor:pointer;color:var(--muted);border-right:1px solid var(--border);
+  font-family:'Space Mono',monospace;transition:all 0.1s;
+}
+.tab:hover{color:#fff;background:var(--bg2)}
+.tab.active{color:var(--accent);background:var(--bg2);border-bottom:2px solid var(--accent);margin-bottom:-1px}
+
+.center-body{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+
+/* ── RIGHT PANEL ───────────────────────────────── */
+.rightpanel{
+  width:280px;flex-shrink:0;
+  border-left:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+
+/* ── SHARED COMPONENTS ─────────────────────────── */
+.panel{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:3px;
+  overflow:hidden;
+}
+.panel-head{
+  background:var(--bg1);
+  padding:6px 12px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.panel-title{
+  font-size:0.65rem;letter-spacing:0.25em;text-transform:uppercase;
+  color:var(--muted);font-family:'Space Mono',monospace;
+}
+.panel-body{padding:12px}
+
+/* Knob grid */
+.knob-grid{display:grid;gap:10px}
+.knob-grid-2{grid-template-columns:repeat(2,1fr)}
+.knob-grid-3{grid-template-columns:repeat(3,1fr)}
+.knob-grid-4{grid-template-columns:repeat(4,1fr)}
+.knob-grid-6{grid-template-columns:repeat(6,1fr)}
+
+.knob-wrap{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+}
+.knob-svg{cursor:pointer;touch-action:none;user-select:none}
+.knob-label{
+  font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--muted);text-align:center;font-family:'Space Mono',monospace;
+  white-space:nowrap;
+}
+.knob-val{
+  font-size:0.72rem;font-family:'Space Mono',monospace;
+  color:var(--text);font-weight:700;
+}
+
+/* Sliders */
+.slider-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.slider-name{
+  font-size:0.72rem;font-family:'Space Mono',monospace;
+  color:#aaa;white-space:nowrap;width:110px;flex-shrink:0;
+}
+.slider-val{
+  font-size:0.72rem;font-family:'Space Mono',monospace;
+  color:var(--accent);width:60px;text-align:right;flex-shrink:0;
+}
+input[type=range]{
+  -webkit-appearance:none;flex:1;background:transparent;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:13px;height:13px;border-radius:50%;
+  background:#fff;margin-top:-5px;border:1.5px solid #000;
+}
+input[type=range]:active::-webkit-slider-thumb{background:var(--accent)}
+input[type=range]::-webkit-slider-runnable-track{
+  height:3px;background:var(--border2);border-radius:2px;
+}
+input[type=range]:focus{outline:none}
+
+/* Buttons */
+.btn{
+  background:var(--bg3);border:1px solid var(--border2);
+  color:var(--text);font-family:'Space Mono',monospace;
+  font-size:0.72rem;font-weight:700;padding:6px 12px;
+  cursor:pointer;text-transform:uppercase;letter-spacing:0.1em;
+  border-radius:2px;transition:all 0.1s;white-space:nowrap;
+}
+.btn:hover{border-color:#666;color:#fff}
+.btn.active{background:rgba(255,60,0,0.15);border-color:var(--accent);color:var(--accent)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{background:#ff5520;border-color:#ff5520;color:#fff}
+.btn-sm{padding:4px 8px;font-size:0.65rem}
+.btn-green{background:rgba(0,255,136,0.1);border-color:var(--green);color:var(--green)}
+.btn-green:hover{background:rgba(0,255,136,0.2);color:var(--green)}
+
+/* Oscilloscope / FFT */
+.screen{
+  background:#020202;border:1px solid var(--border);
+  border-radius:3px;position:relative;overflow:hidden;
+}
+.screen canvas{display:block;width:100%;height:100%}
+.screen-lbl{
+  position:absolute;top:4px;right:6px;
+  font-family:'Space Mono',monospace;font-size:9px;
+  color:rgba(255,255,255,0.2);letter-spacing:0.1em;
+}
+.screen-val{
+  position:absolute;bottom:5px;left:8px;
+  font-family:'Space Mono',monospace;font-size:10px;
+  color:rgba(255,255,255,0.4);
+}
+
+/* Stepsequencer */
+.seq-grid{display:grid;gap:3px}
+.seq-step{
+  width:100%;aspect-ratio:1;border-radius:2px;
+  background:var(--bg3);border:1px solid var(--border);
+  cursor:pointer;transition:all 0.1s;position:relative;
+}
+.seq-step.on{background:var(--accent);border-color:var(--accent2)}
+.seq-step.current{box-shadow:0 0 8px var(--accent3);border-color:var(--accent3)}
+.seq-step.on.current{background:var(--accent3);border-color:#fff}
+.seq-step.accent-step{background:rgba(255,200,0,0.25);border-color:var(--accent3)}
+.seq-step.accent-step.on{background:var(--accent3);border-color:#fff}
+
+/* Envelope editor canvas */
+#env-canvas{cursor:crosshair}
+
+/* LFO/Mod section */
+.mod-matrix-row{
+  display:grid;grid-template-columns:1fr 1fr 80px 80px;
+  gap:6px;align-items:center;margin-bottom:5px;
+}
+
+/* Toggle switch */
+.toggle-wrap{display:flex;align-items:center;gap:8px}
+.toggle{
+  width:32px;height:18px;background:var(--bg3);
+  border:1px solid var(--border2);border-radius:9px;
+  cursor:pointer;position:relative;transition:all 0.2s;flex-shrink:0;
+}
+.toggle::after{
+  content:'';position:absolute;width:12px;height:12px;
+  background:#555;border-radius:50%;top:2px;left:2px;transition:all 0.2s;
+}
+.toggle.on{background:rgba(255,60,0,0.2);border-color:var(--accent)}
+.toggle.on::after{background:var(--accent);transform:translateX(14px)}
+.toggle-label{font-size:0.72rem;font-family:'Space Mono',monospace;color:#aaa}
+
+/* Select */
+select{
+  background:var(--bg3);border:1px solid var(--border2);
+  color:var(--text);font-family:'Space Mono',monospace;
+  font-size:0.72rem;padding:4px 8px;border-radius:2px;cursor:pointer;
+  outline:none;
+}
+select:hover{border-color:#666}
+
+/* LED indicator */
+.led{
+  width:8px;height:8px;border-radius:50%;
+  background:#1a1a1a;border:1px solid #333;flex-shrink:0;
+  transition:all 0.05s;
+}
+.led.on{background:var(--green);box-shadow:0 0 6px var(--green)}
+.led.beat{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+
+/* BPM display */
+.bpm-display{
+  font-family:'Space Mono',monospace;font-weight:700;
+  font-size:1.3rem;color:#fff;letter-spacing:-0.02em;
+  background:var(--bg);border:1px solid var(--border2);
+  padding:2px 12px;border-radius:2px;
+  cursor:ns-resize;user-select:none;
+  min-width:72px;text-align:center;
+}
+
+/* VU meter */
+.vu-bar{height:8px;background:var(--border);border-radius:1px;overflow:hidden;margin-bottom:3px}
+.vu-fill{height:100%;transition:width 0.05s;border-radius:1px;
+  background:linear-gradient(90deg,var(--green),var(--accent3) 70%,var(--accent))
+}
+
+/* Note display */
+.note-display{
+  font-family:'Space Mono',monospace;font-size:2rem;font-weight:700;
+  color:var(--accent);text-align:center;line-height:1;
+}
+.freq-display{
+  font-family:'Space Mono',monospace;font-size:0.72rem;
+  color:var(--muted);text-align:center;
+}
+
+/* Pitch env display */
+.pitch-env-area{background:#020202;border:1px solid var(--border);border-radius:3px;overflow:hidden}
+
+/* Effect chain */
+.fx-slot{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:3px;padding:8px 10px;margin-bottom:5px;
+  display:flex;align-items:center;gap:8px;
+}
+.fx-name{font-size:0.8rem;font-weight:700;color:#ddd;flex:1;letter-spacing:0.05em}
+
+/* Category pills */
+.pill{
+  font-size:0.62rem;font-family:'Space Mono',monospace;
+  letter-spacing:0.1em;padding:2px 7px;border-radius:10px;
+  text-transform:uppercase;
+}
+.pill-orange{background:rgba(255,60,0,0.15);color:var(--accent);border:1px solid rgba(255,60,0,0.3)}
+.pill-green{background:rgba(0,255,136,0.1);color:var(--green);border:1px solid rgba(0,255,136,0.25)}
+.pill-blue{background:rgba(0,136,255,0.1);color:var(--blue);border:1px solid rgba(0,136,255,0.25)}
+.pill-purple{background:rgba(170,68,255,0.1);color:var(--purple);border:1px solid rgba(170,68,255,0.25)}
+
+/* Info/Help text */
+.help{font-size:0.7rem;color:var(--muted);line-height:1.5;padding:6px 0}
+
+/* Scrollbar styling */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* ── PIANO KEYBOARD ────────────────────────────── */
+.piano{display:flex;height:40px;gap:0;background:#111;border-radius:2px;overflow:hidden;border:1px solid var(--border)}
+.white-key{
+  flex:1;background:#ddd;border-right:1px solid #888;
+  cursor:pointer;position:relative;transition:background 0.05s;
+}
+.white-key:hover{background:#fff}
+.white-key.active{background:var(--accent2)}
+.black-key{
+  flex:0 0 calc(100%/12.5);background:#111;
+  height:65%;border:1px solid #000;border-top:none;
+  cursor:pointer;margin-left:-0.5%;z-index:2;position:relative;
+  transition:background 0.05s;
+}
+.black-key:hover{background:#333}
+.black-key.active{background:var(--accent)}
+
+/* ── ANIMATION ─────────────────────────────────── */
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+.blink{animation:pulse 1s infinite}
+
+/* WAVEFORM TYPE BUTTONS */
+.waveform-btns{display:flex;gap:4px;flex-wrap:wrap}
+.wave-btn{
+  padding:5px 10px;background:var(--bg3);border:1px solid var(--border2);
+  color:#aaa;cursor:pointer;border-radius:2px;
+  font-family:'Space Mono',monospace;font-size:0.65rem;
+  transition:all 0.1s;text-transform:uppercase;letter-spacing:0.05em;
+}
+.wave-btn:hover{border-color:#666;color:#fff}
+.wave-btn.active{background:rgba(255,60,0,0.15);border-color:var(--accent);color:var(--accent)}
+
+/* ALGORITHM BUTTONS */
+.algo-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.algo-btn{
+  padding:8px 10px;background:var(--bg3);border:1px solid var(--border2);
+  cursor:pointer;border-radius:3px;text-align:left;transition:all 0.1s;
+}
+.algo-btn:hover{border-color:#555}
+.algo-btn.active{background:rgba(255,60,0,0.1);border-color:var(--accent)}
+.algo-btn .name{font-size:0.78rem;font-weight:700;color:#ddd;letter-spacing:0.05em;display:block}
+.algo-btn .desc{font-size:0.62rem;color:var(--muted);font-family:'Space Mono',monospace;margin-top:2px;display:block}
+.algo-btn.active .name{color:var(--accent)}
+.algo-btn.active .desc{color:rgba(255,60,0,0.7)}
+
+/* ── PLAYHEAD ──────────────────────────────────── */
+.playhead{height:3px;background:var(--bg);position:relative;overflow:hidden;border-top:1px solid var(--border)}
+.playhead-bar{height:100%;width:0;background:var(--accent);transition:width 0.05s linear}
+
+/* ── RESPONSIVE OVERFLOW HANDLING ──────────────── */
+@media(max-width:1100px){.sidebar{display:none}}
+@media(max-width:800px){.rightpanel{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="topbar">
+  <div class="logo">FENELITE <em>PRO</em></div>
+
+  <div class="topbar-center">
+    <button class="btn btn-sm" id="btn-stop" title="Stop (S)">■ STOP</button>
+    <button class="btn btn-sm btn-primary" id="btn-play" title="Play (Space)">▶ PLAY</button>
+    <button class="btn btn-sm" id="btn-loop" title="Loop (L)">⟳ LOOP</button>
+
+    <div style="width:1px;height:24px;background:var(--border);margin:0 6px"></div>
+
+    <span style="font-size:0.65rem;color:var(--muted);font-family:'Space Mono',monospace">BPM</span>
+    <div class="bpm-display" id="bpm-display" title="Drag to change BPM">142</div>
+    <button class="btn btn-sm" id="btn-tap">TAP</button>
+
+    <div style="width:1px;height:24px;background:var(--border);margin:0 6px"></div>
+
+    <span style="font-size:0.65rem;color:var(--muted);font-family:'Space Mono',monospace">SWING</span>
+    <input type="range" id="swing-slider" min="0" max="100" value="0" style="width:80px">
+    <span class="slider-val" id="swing-val" style="width:28px">0%</span>
+
+    <div style="width:1px;height:24px;background:var(--border);margin:0 6px"></div>
+
+    <span style="font-size:0.65rem;color:var(--muted);font-family:'Space Mono',monospace">VOL</span>
+    <input type="range" id="master-vol" min="0" max="100" value="85" style="width:70px">
+    <div class="led" id="vu-led"></div>
+  </div>
+
+  <div class="topbar-right">
+    <button class="btn btn-sm" id="btn-random">RANDOM</button>
+    <button class="btn btn-sm" id="btn-save-preset">SAVE</button>
+    <button class="btn btn-sm btn-green" id="btn-export">WAV</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Presets</div>
+      <div style="display:flex;gap:4px;margin-bottom:6px">
+        <input id="preset-search" type="text" placeholder="Search..." style="flex:1;background:var(--bg);border:1px solid var(--border2);color:#aaa;padding:4px 7px;border-radius:2px;font-family:'Space Mono',monospace;font-size:0.68rem;outline:none">
+      </div>
+    </div>
+    <div class="preset-list" id="preset-list"></div>
+  </div>
+
+  <div class="center">
+
+    <div class="center-top">
+      <div class="tab active" data-tab="synth">SYNTH</div>
+      <div class="tab" data-tab="seq">SEQUENCER</div>
+      <div class="tab" data-tab="env">ENVELOPE</div>
+      <div class="tab" data-tab="fx">FX CHAIN</div>
+      <div class="tab" data-tab="mod">MODULATION</div>
+      <div class="tab" data-tab="tune">TUNING</div>
+    </div>
+
+    <div class="center-body">
+
+      <div id="tab-synth">
+
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">I. Algorithm Mode</span>
+            <div style="display:flex;gap:4px">
+              <span class="pill pill-orange" id="current-algo-label">HARD CLIP</span>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="algo-grid">
+              <button class="algo-btn active" data-type="typeA">
+                <span class="name">TYPE A — HARD CLIP</span>
+                <span class="desc">Aggressive comb+filter crunch</span>
+              </button>
+              <button class="algo-btn" data-type="typeB">
+                <span class="name">TYPE B — WARM TUBE</span>
+                <span class="desc">Tanh saturation + chorus tail</span>
+              </button>
+              <button class="algo-btn" data-type="typeC">
+                <span class="name">TYPE C — WAVEFOLD</span>
+                <span class="desc">Extreme harmonic folding</span>
+              </button>
+              <button class="algo-btn" data-type="typeD">
+                <span class="name">TYPE D — REVERSE SWELL</span>
+                <span class="desc">Swelling sub tail wump</span>
+              </button>
+              <button class="algo-btn" data-type="typeE">
+                <span class="name">TYPE E — BITCRUSH</span>
+                <span class="desc">Lo-fi digital decimation</span>
+              </button>
+              <button class="algo-btn" data-type="typeF">
+                <span class="name">TYPE F — FM DISTORT</span>
+                <span class="desc">FM feedback self-modulation</span>
+              </button>
+              <button class="algo-btn" data-type="typeG">
+                <span class="name">TYPE G — MULTIBAND</span>
+                <span class="desc">Independent 3-band shaping</span>
+              </button>
+              <button class="algo-btn" data-type="typeH">
+                <span class="name">TYPE H — NEURO</span>
+                <span class="desc">Neuro bass layering</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">II. Oscillator</span>
+            <div class="waveform-btns" id="osc-wave-btns">
+              <button class="wave-btn active" data-wave="sine">SIN</button>
+              <button class="wave-btn" data-wave="triangle">TRI</button>
+              <button class="wave-btn" data-wave="sawtooth">SAW</button>
+              <button class="wave-btn" data-wave="square">SQR</button>
+              <button class="wave-btn" data-wave="supersaw">S.SAW</button>
+              <button class="wave-btn" data-wave="pulse">PULSE</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="knob-grid knob-grid-6" style="margin-bottom:10px">
+              <div class="knob-wrap">
+                <svg class="knob-svg" width="54" height="54" data-param="drive" data-min="0" data-max="100" data-val="80"><circle cx="27" cy="27" r="20" fill="#111" stroke="#333" stroke-width="2"/><path id="knob-arc-drive" d="" stroke="#ff3c00" stroke-width="3" fill="none" stroke-linecap="round"/><line id="knob-line-drive" x1="27" y1="27" x2="27" y2="10" stroke="#eee" stroke-width="2" stroke-linecap="round"/></svg>
+                <div class="knob-label">DRIVE</div>
+                <div class="knob-val" id="knob-val-drive">80%</div>
+              </div>
+              <div class="knob-wrap">
+                <svg class="knob-svg" width="54" height="54" data-param="punch" data-min="0" data-max="100" data-val="85"><circle cx="27" cy="27" r="20" fill="#111" stroke="#333" stroke-width="2"/><path id="knob-arc-punch" d="" stroke="#ff3c00" stroke-width="3" fill="none" stroke-linecap="round"/><line id="knob-line-punch" x1="27" y1="27" x2="27" y2="10" stroke="#eee" stroke-width="2" stroke-linecap="round"/></svg>
+                <div class="knob-label">PUNCH</div>
+                <div class="knob-val" id="knob-val-punch">85%</div>
+              </div>
+              <div class="knob-wrap">
+                <svg class="knob-svg" width="54" height="54" data-param="sub" data-min="0" data-max="100" data-val="75"><circle cx="27" cy="27" r="20" fill="#111" stroke="#333" stroke-width="2"/><path id="knob-arc-sub" d="" stroke="#ff7a00" stroke-width="3" fill="none" stroke-linecap="round"/><line id="knob-line-sub" x1="27" y1="27" x2="27" y2="10" stroke="#eee" stroke-width="2" stroke-linecap="round"/></svg>
+                <div class="knob-label">SUB</div>
+                <div class="knob-val" id="knob-val-sub">75%</div>
+              </div>
+              <div class="knob-wrap">
+                <svg class="knob-svg" width="54" height="54" data-param="reso" data-min="0" data-max="100" data-val="65"><circle cx="27" cy="27" r="20" fill="#111" stroke="#333" stroke-width="2"/><path id="knob-arc-reso" d="" stroke="#ff7a00" stroke-width="3" fill="none" stroke-linecap="round"/><line id="knob-line-reso" x1="27" y1="27" x2="27" y2="10" stroke="#eee" stroke-width="2" stroke-linecap="round"/></svg>
+                <div class="knob-label">RESO</div>
+                <div class="knob-val" id="knob-val-reso">65%</div>
+              </div>
+              <div class="knob-wrap">
+                <svg class="knob-svg" width="54" height="54" data-param="click" data-min="0" data-max="100" data-val="50"><circle cx="27" cy="27" r="20" fill="#111" stroke="#333" stroke-width="2"/><path id="knob-arc-click" d="" stroke="#ffcc00" stroke-width="3" fill="none" stroke-linecap="round"/><line id="knob-line-click" x1="27" y1="27" x2="27" y2="10" stroke="#eee" stroke-width="2" stroke-linecap="round"/></svg>
+                <div class="knob-label">CLICK</div>
+                <div class="knob-val" id="knob-val-click">50%</div>
+              </div>
+              <div class="knob-wrap">
+                <svg class="knob-svg" width="54" height="54" data-param="noise" data-min="0" data-max="100" data-val="10"><circle cx="27" cy="27" r="20" fill="#111" stroke="#333" stroke-width="2"/><path id="knob-arc-noise" d="" stroke="#0088ff" stroke-width="3" fill="none" stroke-linecap="round"/><line id="knob-line-noise" x1="27" y1="27" x2="27" y2="10" stroke="#eee" stroke-width="2" stroke-linecap="round"/></svg>
+                <div class="knob-label">NOISE</div>
+                <div class="knob-val" id="knob-val-noise">10%</div>
+              </div>
+            </div>
+
+            <div class="slider-row">
+              <span class="slider-name">DECAY (ms)</span>
+              <input type="range" id="param-decay" min="50" max="2000" value="600">
+              <span class="slider-val" id="val-decay">600ms</span>
+            </div>
+            <div class="slider-row">
+              <span class="slider-name">START FREQ</span>
+              <input type="range" id="param-startfreq" min="50" max="500" value="140">
+              <span class="slider-val" id="val-startfreq">140Hz</span>
+            </div>
+            <div class="slider-row">
+              <span class="slider-name">PITCH FALL</span>
+              <input type="range" id="param-pitchfall" min="5" max="200" value="45">
+              <span class="slider-val" id="val-pitchfall">45</span>
+            </div>
+            <div class="slider-row">
+              <span class="slider-name">BASE KEY</span>
+              <input type="range" id="param-freq" min="30" max="80" value="43.6" step="0.1">
+              <span class="slider-val" id="val-freq">F1</span>
+            </div>
+            <div class="slider-row">
+              <span class="slider-name">OSC PHASE</span>
+              <input type="range" id="param-phase" min="0" max="360" value="0">
+              <span class="slider-val" id="val-phase">0°</span>
+            </div>
+            <div class="slider-row">
+              <span class="slider-name">SUP.SAW DET</span>
+              <input type="range" id="param-detune" min="0" max="50" value="8">
+              <span class="slider-val" id="val-detune">8¢</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">III. Filter</span>
+            <div style="display:flex;gap:4px">
+              <select id="filter-type">
+                <option value="lowpass">LP</option>
+                <option value="highpass">HP</option>
+                <option value="bandpass">BP</option>
+                <option value="notch">NOTCH</option>
+                <option value="peaking">PEAK</option>
+              </select>
+              <div class="toggle-wrap">
+                <div class="toggle on" id="filter-toggle" data-key="filterOn"></div>
+                <span class="toggle-label">ON</span>
+              </div>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="knob-grid knob-grid-4">
+              <div class="knob-wrap">
+                <svg class="knob-svg" width="54" height="54" data-param="ffreq" data-min="20" data-max="100" data-val="70"><circle cx="27" cy="27" r="20" fill="#111" stroke="#333" stroke-width="2"/><path id="knob-arc-ffreq" d="" stroke="#aa44ff" stroke-width="3" fill="none" stroke-linecap="round"/><line id="knob-line-ffreq" x1="27" y1="27" x2="27" y2="10" stroke="#eee" stroke-width="2" stroke-linecap="round"/></svg>
+                <div class="knob-label">CUTOFF</div>
+                <div class="knob-val" id="knob-val-ffreq">70%</div>
+              </div>
+              <div class="knob-wrap">
+                <svg class="knob-svg" width="54" height="54" data-param="freso" data-min="0" data-max="100" data-val="30"><circle cx="27" cy="27" r="20" fill="#111" stroke="#333" stroke-width="2"/><path id="knob-arc-freso" d="" stroke="#aa44ff" stroke-width="3" fill="none" stroke-linecap="round"/><line id="knob-line-freso" x1="27" y1="27" x2="27" y2="10" stroke="#eee" stroke-width="2" stroke-linecap="round"/></svg>
+                <div class="knob-label">RESONANCE</div>
+                <div class="knob-val" id="knob-val-freso">30%</div>
+              </div>
+              <div class="knob-wrap">
+                <svg class="knob-svg" width="54" height="54" data-param="fenv" data-min="0" data-max="100" data-val="40"><circle cx="27" cy="27" r="20" fill="#111" stroke="#333" stroke-width="2"/><path id="knob-arc-fenv" d="" stroke="#0088ff" stroke-width="3" fill="none" stroke-linecap="round"/><line id="knob-line-fenv" x1="27" y1="27" x2="27" y2="10" stroke="#eee" stroke-width="2" stroke-linecap="round"/></svg>
+                <div class="knob-label">ENV AMT</div>
+                <div class="knob-val" id="knob-val-fenv">40%</div>
+              </div>
+              <div class="knob-wrap">
+                <svg class="knob-svg" width="54" height="54" data-param="fdecay" data-min="0" data-max="100" data-val="55"><circle cx="27" cy="27" r="20" fill="#111" stroke="#333" stroke-width="2"/><path id="knob-arc-fdecay" d="" stroke="#0088ff" stroke-width="3" fill="none" stroke-linecap="round"/><line id="knob-line-fdecay" x1="27" y1="27" x2="27" y2="10" stroke="#eee" stroke-width="2" stroke-linecap="round"/></svg>
+                <div class="knob-label">DECAY</div>
+                <div class="knob-val" id="knob-val-fdecay">55%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="tab-seq" style="display:none">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Step Sequencer</span>
+            <div style="display:flex;gap:6px;align-items:center">
+              <span style="font-size:0.68rem;font-family:'Space Mono',monospace;color:var(--muted)">STEPS</span>
+              <select id="seq-steps">
+                <option value="8">8</option>
+                <option value="16" selected>16</option>
+                <option value="32">32</option>
+              </select>
+              <button class="btn btn-sm" id="seq-clear">CLEAR</button>
+              <button class="btn btn-sm" id="seq-fill">FILL 4/4</button>
+              <button class="btn btn-sm" id="seq-fill-tekno">TEKNO</button>
+              <button class="btn btn-sm" id="seq-random-pattern">RANDOM</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div style="margin-bottom:8px;font-size:0.72rem;font-family:'Space Mono',monospace;color:var(--muted)">KICK PATTERN (click = toggle, right-click = accent)</div>
+            <div id="seq-grid-kick" class="seq-grid" style="grid-template-columns:repeat(16,1fr);margin-bottom:10px"></div>
+            <div style="margin-bottom:8px;font-size:0.72rem;font-family:'Space Mono',monospace;color:var(--muted)">ACCENT PATTERN</div>
+            <div id="seq-grid-accent" class="seq-grid" style="grid-template-columns:repeat(16,1fr)"></div>
+
+            <div style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap">
+              <div class="toggle-wrap">
+                <div class="toggle on" id="seq-running-toggle"></div>
+                <span class="toggle-label">SEQUENCER ACTIVE</span>
+              </div>
+              <div class="toggle-wrap">
+                <div class="toggle" id="seq-humanize-toggle"></div>
+                <span class="toggle-label">HUMANIZE ±8ms</span>
+              </div>
+              <div class="toggle-wrap">
+                <div class="toggle" id="seq-flam-toggle"></div>
+                <span class="toggle-label">FLAM</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-env" style="display:none">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Visual Envelope Editor</span>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-sm" id="env-type-amp" class="active">AMP ENV</button>
+              <button class="btn btn-sm" id="env-type-pitch">PITCH ENV</button>
+              <button class="btn btn-sm" id="env-type-filter">FILTER ENV</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="screen" style="height:200px">
+              <canvas id="env-canvas" width="600" height="200"></canvas>
+              <div class="screen-lbl">DRAG POINTS TO EDIT</div>
+            </div>
+            <div style="margin-top:10px;display:grid;grid-template-columns:repeat(5,1fr);gap:10px">
+              <div>
+                <div class="slider-name" style="font-size:0.68rem;width:auto;text-align:center">ATTACK</div>
+                <input type="range" id="env-attack" min="0" max="100" value="5">
+                <div class="slider-val" id="env-attack-val" style="width:auto;text-align:center;display:block">5ms</div>
+              </div>
+              <div>
+                <div class="slider-name" style="font-size:0.68rem;width:auto;text-align:center">HOLD</div>
+                <input type="range" id="env-hold" min="0" max="100" value="5">
+                <div class="slider-val" id="env-hold-val" style="width:auto;text-align:center;display:block">5ms</div>
+              </div>
+              <div>
+                <div class="slider-name" style="font-size:0.68rem;width:auto;text-align:center">DECAY</div>
+                <input type="range" id="env-decay" min="10" max="2000" value="600">
+                <div class="slider-val" id="env-decay-val" style="width:auto;text-align:center;display:block">600ms</div>
+              </div>
+              <div>
+                <div class="slider-name" style="font-size:0.68rem;width:auto;text-align:center">CURVE</div>
+                <input type="range" id="env-curve" min="-100" max="100" value="-60">
+                <div class="slider-val" id="env-curve-val" style="width:auto;text-align:center;display:block">EXP</div>
+              </div>
+              <div>
+                <div class="slider-name" style="font-size:0.68rem;width:auto;text-align:center">SUSTAIN</div>
+                <input type="range" id="env-sustain" min="0" max="100" value="0">
+                <div class="slider-val" id="env-sustain-val" style="width:auto;text-align:center;display:block">0%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-fx" style="display:none">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">FX Chain (signal flow: top → bottom)</span>
+          </div>
+          <div class="panel-body">
+
+            <div class="fx-slot">
+              <div class="toggle on" id="fx-eq-toggle"></div>
+              <div class="fx-name">EQ3 <span class="pill pill-purple">EQUALIZER</span></div>
+              <div style="display:flex;gap:10px;flex:1;align-items:center">
+                <span style="font-size:0.68rem;color:var(--muted);font-family:'Space Mono',monospace">LOW</span>
+                <input type="range" id="fx-eq-low" min="-12" max="12" value="2" style="width:70px">
+                <span style="font-size:0.68rem;color:var(--muted);font-family:'Space Mono',monospace">MID</span>
+                <input type="range" id="fx-eq-mid" min="-12" max="12" value="0" style="width:70px">
+                <span style="font-size:0.68rem;color:var(--muted);font-family:'Space Mono',monospace">HIGH</span>
+                <input type="range" id="fx-eq-high" min="-12" max="12" value="-2" style="width:70px">
+              </div>
+            </div>
+
+            <div class="fx-slot">
+              <div class="toggle on" id="fx-comp-toggle"></div>
+              <div class="fx-name">COMPRESSOR <span class="pill pill-orange">DYNAMICS</span></div>
+              <div style="display:flex;gap:10px;flex:1;align-items:center">
+                <span style="font-size:0.68rem;color:var(--muted);font-family:'Space Mono',monospace">THR</span>
+                <input type="range" id="fx-comp-thresh" min="-40" max="0" value="-12" style="width:60px">
+                <span style="font-size:0.68rem;color:var(--muted);font-family:'Space Mono',monospace">RATIO</span>
+                <input type="range" id="fx-comp-ratio" min="1" max="20" value="4" style="width:60px">
+                <span style="font-size:0.68rem;color:var(--muted);font-family:'Space Mono',monospace">GAIN</span>
+                <input type="range" id="fx-comp-gain" min="0" max="24" value="6" style="width:60px">
+              </div>
+            </div>
+
+            <div class="fx-slot">
+              <div class="toggle" id="fx-dist-toggle"></div>
+              <div class="fx-name">DISTORTION <span class="pill pill-orange">SATURATION</span></div>
+              <div style="display:flex;gap:10px;flex:1;align-items:center">
+                <select id="fx-dist-type" style="font-size:0.65rem">
+                  <option>TANH</option><option>HARD CLIP</option><option>FOLD</option><option>ASYM</option>
+                </select>
+                <span style="font-size:0.68rem;color:var(--muted);font-family:'Space Mono',monospace">AMT</span>
+                <input type="range" id="fx-dist-amt" min="0" max="100" value="30" style="width:80px">
+                <span style="font-size:0.68rem;color:var(--muted);font-family:'Space Mono',monospace">MIX</span>
+                <input type="range" id="fx-dist-mix" min="0" max="100" value="100" style="width:80px">
+              </div>
+            </div>
+
+            <div class="fx-slot">
+              <div class="toggle on" id="fx-trans-toggle"></div>
+              <div class="fx-name">TRANSIENT SHAPER <span class="pill pill-green">DYNAMICS</span></div>
+              <div style="display:flex;gap:10px;flex:1;align-items:center">
+                <span style="font-size:0.68rem;color:var(--muted);font-family:'Space Mono',monospace">ATTACK</span>
+                <input type="range" id="fx-trans-attack" min="-100" max="100" value="30" style="width:80px">
+                <span style="font-size:0.68rem;color:var(--muted);font-family:'Space Mono',monospace">SUSTAIN</span>
+                <input type="range" id="fx-trans-sustain" min="-100" max="100" value="-20" style="width:80px">
+              </div>
+            </div>
+
+            <div class="fx-slot">
+              <div class="toggle" id="fx-stereo-toggle"></div>
+              <div class="fx-name">STEREO WIDENER <span class="pill pill-blue">SPATIAL</span></div>
+              <div style="display:flex;gap:10px;flex:1;align-items:center">
+                <span style="font-size:0.68rem;color:var(--muted);font-family:'Space Mono',monospace">WIDTH</span>
+                <input type="range" id="fx-stereo-width" min="0" max="200" value="100" style="width:100px">
+                <span style="font-size:0.68rem;color:var(--muted);font-family:'Space Mono',monospace">MID SOLO</span>
+                <div class="toggle" id="fx-mid-solo"></div>
+              </div>
+            </div>
+
+            <div class="fx-slot">
+              <div class="toggle on" id="fx-lim-toggle"></div>
+              <div class="fx-name">BRICKWALL LIMITER <span class="pill pill-orange">MASTER</span></div>
+              <div style="display:flex;gap:10px;flex:1;align-items:center">
+                <span style="font-size:0.68rem;color:var(--muted);font-family:'Space Mono',monospace">CEILING</span>
+                <input type="range" id="fx-lim-ceiling" min="-12" max="0" value="-0.1" step="0.1" style="width:100px">
+                <span id="fx-lim-val" style="font-family:'Space Mono',monospace;font-size:0.68rem;color:var(--accent)">-0.1 dB</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-mod" style="display:none">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">LFO + Modulation Matrix</span>
+          </div>
+          <div class="panel-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+              <div>
+                <div style="font-size:0.72rem;font-family:'Space Mono',monospace;color:var(--accent);margin-bottom:6px">LFO 1</div>
+                <div class="slider-row">
+                  <span class="slider-name">RATE (Hz)</span>
+                  <input type="range" id="lfo1-rate" min="0.1" max="20" step="0.1" value="2">
+                  <span class="slider-val" id="lfo1-rate-val">2.0Hz</span>
+                </div>
+                <div class="slider-row">
+                  <span class="slider-name">DEPTH</span>
+                  <input type="range" id="lfo1-depth" min="0" max="100" value="30">
+                  <span class="slider-val" id="lfo1-depth-val">30%</span>
+                </div>
+                <div class="waveform-btns" id="lfo1-wave-btns" style="margin-top:6px">
+                  <button class="wave-btn active" data-lfo="1" data-wave="sine">SIN</button>
+                  <button class="wave-btn" data-lfo="1" data-wave="triangle">TRI</button>
+                  <button class="wave-btn" data-lfo="1" data-wave="square">SQR</button>
+                  <button class="wave-btn" data-lfo="1" data-wave="random">S&H</button>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:0.72rem;font-family:'Space Mono',monospace;color:var(--accent2);margin-bottom:6px">LFO 2</div>
+                <div class="slider-row">
+                  <span class="slider-name">RATE (Hz)</span>
+                  <input type="range" id="lfo2-rate" min="0.1" max="20" step="0.1" value="5">
+                  <span class="slider-val" id="lfo2-rate-val">5.0Hz</span>
+                </div>
+                <div class="slider-row">
+                  <span class="slider-name">DEPTH</span>
+                  <input type="range" id="lfo2-depth" min="0" max="100" value="15">
+                  <span class="slider-val" id="lfo2-depth-val">15%</span>
+                </div>
+                <div class="waveform-btns" id="lfo2-wave-btns" style="margin-top:6px">
+                  <button class="wave-btn active" data-lfo="2" data-wave="sine">SIN</button>
+                  <button class="wave-btn" data-lfo="2" data-wave="triangle">TRI</button>
+                  <button class="wave-btn" data-lfo="2" data-wave="square">SQR</button>
+                  <button class="wave-btn" data-lfo="2" data-wave="random">S&H</button>
+                </div>
+              </div>
+            </div>
+
+            <div style="font-size:0.72rem;font-family:'Space Mono',monospace;color:var(--muted);margin-bottom:8px">MOD MATRIX</div>
+            <div id="mod-matrix">
+              <div class="mod-matrix-row">
+                <select><option>LFO 1</option><option>LFO 2</option><option>Velocity</option></select>
+                <select><option>Drive</option><option>Filter Cutoff</option><option>Pitch</option><option>Sub Amount</option></select>
+                <input type="range" min="0" max="100" value="20" title="Amount">
+                <span style="font-family:'Space Mono',monospace;font-size:0.68rem;color:var(--muted)">20%</span>
+              </div>
+              <div class="mod-matrix-row">
+                <select><option>LFO 2</option><option>LFO 1</option><option>Velocity</option></select>
+                <select><option>Filter Cutoff</option><option>Drive</option><option>Pitch</option></select>
+                <input type="range" min="0" max="100" value="35" title="Amount">
+                <span style="font-family:'Space Mono',monospace;font-size:0.68rem;color:var(--muted)">35%</span>
+              </div>
+            </div>
+            <button class="btn btn-sm" id="add-mod-row" style="margin-top:6px">+ ADD ROW</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-tune" style="display:none">
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Key & Tuning</span></div>
+          <div class="panel-body">
+            <div style="text-align:center;margin-bottom:16px">
+              <div class="note-display" id="note-display">F1</div>
+              <div class="freq-display" id="freq-display">43.6 Hz</div>
+            </div>
+            <div class="piano" id="piano-keyboard"></div>
+            <div style="margin-top:12px">
+              <div class="slider-row">
+                <span class="slider-name">FINE TUNE (¢)</span>
+                <input type="range" id="fine-tune" min="-100" max="100" value="0">
+                <span class="slider-val" id="fine-tune-val">0¢</span>
+              </div>
+              <div class="slider-row">
+                <span class="slider-name">PITCH BEND</span>
+                <input type="range" id="pitch-bend" min="-12" max="12" value="0" step="0.1">
+                <span class="slider-val" id="pitch-bend-val">0st</span>
+              </div>
+              <div class="slider-row">
+                <span class="slider-name">TRANSPOSE</span>
+                <input type="range" id="transpose" min="-24" max="24" value="0" step="1">
+                <span class="slider-val" id="transpose-val">0st</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div></div><div class="rightpanel">
+
+    <div style="padding:10px;border-bottom:1px solid var(--border);flex-shrink:0">
+      <div class="sidebar-title" style="margin-bottom:6px">OSCILLOSCOPE</div>
+      <div class="screen" style="height:90px">
+        <canvas id="canvas-wav"></canvas>
+        <div class="screen-lbl">WAVEFORM</div>
+        <div class="screen-val" id="peak-val">PEAK: ---</div>
+      </div>
+    </div>
+
+    <div style="padding:10px;border-bottom:1px solid var(--border);flex-shrink:0">
+      <div class="sidebar-title" style="margin-bottom:6px">FFT SPECTRUM</div>
+      <div class="screen" style="height:90px">
+        <canvas id="canvas-fft"></canvas>
+        <div class="screen-lbl">FFT</div>
+      </div>
+    </div>
+
+    <div style="padding:10px;border-bottom:1px solid var(--border);flex-shrink:0">
+      <div class="sidebar-title" style="margin-bottom:6px">OUTPUT METER</div>
+      <div class="vu-bar"><div class="vu-fill" id="vu-l" style="width:0%"></div></div>
+      <div class="vu-bar"><div class="vu-fill" id="vu-r" style="width:0%"></div></div>
+    </div>
+
+    <div style="padding:10px;border-bottom:1px solid var(--border);flex-shrink:0">
+      <div class="sidebar-title" style="margin-bottom:6px">PITCH ENVELOPE</div>
+      <div class="screen" style="height:80px">
+        <canvas id="canvas-pitch"></canvas>
+        <div class="screen-lbl">Hz</div>
+      </div>
+    </div>
+
+    <div style="padding:10px;flex:1;overflow-y:auto">
+      <div class="sidebar-title" style="margin-bottom:6px">INFO</div>
+      <div id="info-panel">
+        <div style="font-family:'Space Mono',monospace;font-size:0.65rem;line-height:1.8;color:var(--muted)">
+          <div>ALGO: <span id="info-algo" style="color:var(--accent)">HARD CLIP</span></div>
+          <div>WAVE: <span id="info-wave" style="color:#aaa">SINE</span></div>
+          <div>KEY: <span id="info-key" style="color:var(--accent3)">F1</span></div>
+          <div>DECAY: <span id="info-decay" style="color:#aaa">600ms</span></div>
+          <div>BPM: <span id="info-bpm" style="color:#aaa">142</span></div>
+          <div style="margin-top:8px;color:var(--muted2)">SPACE = play<br>R = random<br>← → = prev/next preset<br>Right-click seq = accent</div>
+        </div>
+      </div>
+    </div>
+
+  </div></div><div class="playhead"><div class="playhead-bar" id="playhead-bar"></div></div>
+
+</div><script>
+// ════════════════════════════════════════════════════════════
+// FENELITE PRO — Full JavaScript Engine
+// ════════════════════════════════════════════════════════════
+
+function noteNameFromFreq(freq) {
+  const notes = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  const midi = Math.round(12 * Math.log2(freq / 440)) + 69;
+  const oct = Math.floor(midi / 12) - 1;
+  return notes[((midi % 12) + 12) % 12] + oct;
+}
+function freqFromMidi(midi) { return 440 * Math.pow(2, (midi - 69) / 12); }
+
+// ── STATE ────────────────────────────────────────────────────
+const State = {
+  type: 'typeA',
+  wave: 'sine',
+  drive: 80, punch: 85, decay: 600, reso: 65,
+  sub: 75, freq: 43.6, click: 50, noise: 10,
+  startfreq: 140, pitchfall: 45, phase: 0, detune: 8,
+  filterOn: true, filterType: 'lowpass',
+  ffreq: 70, freso: 30, fenv: 40, fdecay: 55,
+  bpm: 142, swing: 0, masterVol: 0.85,
+  loopOn: false, seqRunning: true,
+  lfo1: { rate: 2, depth: 30, wave: 'sine' },
+  lfo2: { rate: 5, depth: 15, wave: 'sine' },
+  fineTune: 0, pitchBend: 0, transpose: 0,
+  fxEqLow: 2, fxEqMid: 0, fxEqHigh: -2,
+  fxCompThresh: -12, fxCompRatio: 4, fxCompGain: 6,
+  fxDistAmt: 30, fxDistMix: 100,
+  fxTransAttack: 30, fxTransSustain: -20,
+  fxStereoWidth: 100,
+  fxLimCeiling: -0.1,
+};
+
+const seqSteps = 16;
+const kickPattern = new Array(seqSteps).fill(false);
+const accentPattern = new Array(seqSteps).fill(false);
+// Default 4/4 kick
+[0, 4, 8, 12].forEach(i => kickPattern[i] = true);
+
+let currentStep = -1;
+let seqInterval = null;
+let tapTimes = [];
+
+// ── AUDIO ENGINE ─────────────────────────────────────────────
+const AudioEngine = {
+  ctx: null, analyzer: null, wavAnalyzer: null,
+  buffer: null, reqId: null, isPlaying: false,
+
+  init() {
+    if (this.ctx) return;
+    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // Main analyzer (FFT)
+    this.analyzer = this.ctx.createAnalyser();
+    this.analyzer.fftSize = 2048;
+    this.analyzer.smoothingTimeConstant = 0.75;
+    // Waveform analyzer
+    this.wavAnalyzer = this.ctx.createAnalyser();
+    this.wavAnalyzer.fftSize = 2048;
+    this.wavAnalyzer.smoothingTimeConstant = 0.6;
+    // Chain analyzers
+    this.wavAnalyzer.connect(this.analyzer);
+    this.analyzer.connect(this.ctx.destination);
+    this.startVisuals();
+  },
+
+  async playKick(accent = false) {
+    this.init();
+    if (this.ctx.state === 'suspended') await this.ctx.resume();
+
+    const p = { ...State };
+    if (accent) { p.drive = Math.min(100, p.drive + 15); p.punch = Math.min(100, p.punch + 10); }
+
+    const sampleRate = this.ctx.sampleRate;
+    const duration = (30 + p.decay + 200) / 1000;
+    const numSamples = Math.ceil(duration * sampleRate);
+
+    const buffer = this.ctx.createBuffer(2, numSamples, sampleRate);
+    const left = buffer.getChannelData(0);
+    const right = buffer.getChannelData(1);
+
+    this.synthesizeKick(left, right, numSamples, sampleRate, p);
+
+    const src = this.ctx.createBufferSource();
+    src.buffer = buffer;
+
+    // Apply filter if on
+    let node = src;
+    if (p.filterOn) {
+      const filt = this.ctx.createBiquadFilter();
+      filt.type = p.filterType;
+      const cutoffHz = 80 + (p.ffreq / 100) * (18000 - 80);
+      filt.frequency.setValueAtTime(cutoffHz, this.ctx.currentTime);
+      filt.frequency.exponentialRampToValueAtTime(
+        Math.max(20, cutoffHz * (1 - p.fenv / 100 * 0.8)),
+        this.ctx.currentTime + p.fdecay / 100 * 0.5
+      );
+      filt.Q.value = p.freso / 100 * 20;
+      src.connect(filt);
+      node = filt;
+    }
+
+    // Compressor
+    const comp = this.ctx.createDynamicsCompressor();
+    comp.threshold.value = p.fxCompThresh;
+    comp.ratio.value = p.fxCompRatio;
+    comp.attack.value = 0.001;
+    comp.release.value = 0.15;
+
+    // Master gain
+    const gain = this.ctx.createGain();
+    gain.gain.value = p.masterVol * (1 + p.fxCompGain / 24);
+
+    node.connect(comp);
+    comp.connect(gain);
+    gain.connect(this.wavAnalyzer);
+
+    src.start();
+    this.buffer = buffer;
+
+    // VU animation
+    setTimeout(() => {
+      const vol = 0.4 + Math.random() * 0.5;
+      document.getElementById('vu-l').style.width = (vol * 100) + '%';
+      document.getElementById('vu-r').style.width = ((vol - 0.05 + Math.random() * 0.1) * 100) + '%';
+      const led = document.getElementById('vu-led');
+      led.classList.add('on');
+      setTimeout(() => {
+        led.classList.remove('on');
+        document.getElementById('vu-l').style.width = '0%';
+        document.getElementById('vu-r').style.width = '0%';
+      }, 150);
+    }, 10);
+  },
+
+  synthesizeKick(left, right, numSamples, sampleRate, p) {
+    const attackTime = 0.005;
+    const decayTime = p.decay / 1000;
+    const driveAmount = p.drive / 100;
+    const subVol = p.sub / 100;
+    const resoAmount = p.reso / 100;
+    const clickAmount = p.click / 100;
+    const noiseAmount = p.noise / 100;
+
+    const baseFreq = p.freq * Math.pow(2, (p.transpose + p.pitchBend + p.fineTune / 100) / 12);
+    const startFreq = p.startfreq;
+    const pitchDecay = p.pitchfall;
+
+    let phase = p.phase * Math.PI / 180;
+    let clickPhase = 0;
+
+    const delayTime = 0.015 + resoAmount * 0.01;
+    const delaySamples = Math.floor(sampleRate * delayTime);
+    const delayBuffer = new Float32Array(Math.max(1, delaySamples));
+    let delayIdx = 0;
+
+    // FM feedback
+    let fmFeedback = 0;
+
+    // SuperSaw voices
+    const ssDetuneAmt = p.detune / 100 * 0.05;
+    const ssPhases = [-ssDetuneAmt * 2, -ssDetuneAmt, 0, ssDetuneAmt, ssDetuneAmt * 2];
+
+    for (let i = 0; i < numSamples; i++) {
+      const t = i / sampleRate;
+
+      // ── AMPLITUDE ENVELOPE ──
+      let amp, tailAmp;
+      if (t < attackTime) {
+        amp = t / attackTime;
+      } else {
+        amp = Math.exp(-(t - attackTime) * 16);
+      }
+
+      if (p.type === 'typeD') {
+        if (t > attackTime + 0.05) {
+          const sp = (t - attackTime - 0.05) / decayTime;
+          tailAmp = sp <= 1 ? Math.pow(sp, 2) : Math.max(0, 1 - (t - attackTime - 0.05 - decayTime) * 15);
+        } else { tailAmp = 0; }
+      } else {
+        tailAmp = t >= attackTime ? Math.exp(-(t - attackTime) * (1 / decayTime)) : amp;
+      }
+
+      // ── PITCH DROP ──
+      const currentFreq = baseFreq + (startFreq - baseFreq) * Math.exp(-t * pitchDecay);
+      const phaseInc = (currentFreq * Math.PI * 2) / sampleRate;
+      phase += phaseInc;
+
+      // ── CLICK ──
+      clickPhase += (currentFreq * 2.5 * Math.PI * 2) / sampleRate;
+      const tok = Math.sin(clickPhase) * amp * clickAmount * 0.7;
+
+      // ── OSCILLATOR (wave type) ──
+      let coreOsc;
+      switch (p.wave) {
+        case 'sine': coreOsc = Math.sin(phase); break;
+        case 'triangle': coreOsc = 2 * Math.abs(((phase / (2 * Math.PI)) % 1) - 0.5) * 2 - 1; break;
+        case 'sawtooth': coreOsc = 2 * ((phase / (2 * Math.PI)) % 1) - 1; break;
+        case 'square': coreOsc = Math.sign(Math.sin(phase)); break;
+        case 'supersaw':
+          coreOsc = 0;
+          for (const d of ssPhases) {
+            const sp = phase * (1 + d);
+            coreOsc += (2 * ((sp / (2 * Math.PI)) % 1) - 1) / ssPhases.length;
+          }
+          break;
+        case 'pulse': coreOsc = Math.sin(phase) > 0.3 ? 1 : -1; break;
+        default: coreOsc = Math.sin(phase);
+      }
+
+      // ── NOISE LAYER ──
+      const noiseVal = (Math.random() * 2 - 1) * noiseAmount * amp * 0.3;
+
+      // ── DISTORTION ALGORITHMS ──
+      let mix = coreOsc + tok + noiseVal;
+
+      switch (p.type) {
+        case 'typeA': { // HARD CLIP
+          mix = mix * (1 + driveAmount * 15);
+          mix = Math.max(-0.8, Math.min(0.8, mix));
+          const cbFB = delayBuffer[delayIdx] * (0.6 + resoAmount * 0.35);
+          const cbIn = mix + cbFB;
+          delayBuffer[delayIdx] = cbIn;
+          mix = (mix * amp) + (cbIn * tailAmp * 0.8);
+          delayIdx = (delayIdx + 1) % delaySamples;
+          break;
+        }
+        case 'typeB': { // WARM TUBE
+          mix = mix * (1 + driveAmount * 8);
+          mix = Math.tanh(mix);
+          const chorus = Math.sin(phase * 0.98) * tailAmp * resoAmount;
+          mix = (mix * amp) + ((mix + chorus) * tailAmp * 0.7);
+          break;
+        }
+        case 'typeC': { // WAVEFOLD
+          mix = mix * (1 + driveAmount * 10);
+          if (Math.abs(mix) > 0.5) mix = Math.sin(mix * 3);
+          const square = Math.sign(Math.sin(phase * 1.5)) * tailAmp * resoAmount * 0.5;
+          mix = (mix * amp) + (mix * tailAmp) + square;
+          break;
+        }
+        case 'typeD': { // REVERSE SWELL
+          mix = mix * (1 + driveAmount * 12);
+          mix = Math.tanh(mix);
+          const sawPh = (baseFreq * Math.PI * 2 * t) * 0.5;
+          const saw = ((sawPh / Math.PI) % 2) - 1;
+          mix = (mix * amp) + (saw * tailAmp * (0.5 + resoAmount));
+          break;
+        }
+        case 'typeE': { // BITCRUSH
+          const bits = Math.max(2, Math.round(12 - driveAmount * 10));
+          const step = 2 / Math.pow(2, bits);
+          mix = Math.round(mix / step) * step;
+          const sampleReduce = Math.max(1, Math.floor(1 + driveAmount * 8));
+          if (i % sampleReduce !== 0) mix = left[i - 1] || 0;
+          mix = (mix * amp) + (mix * tailAmp * 0.6);
+          break;
+        }
+        case 'typeF': { // FM DISTORT (self-FM)
+          const fmAmt = driveAmount * 3;
+          const fmPhase = phase + fmFeedback * fmAmt;
+          mix = Math.sin(fmPhase);
+          fmFeedback = mix;
+          mix = (mix * amp) + (mix * tailAmp * (0.5 + resoAmount * 0.5));
+          break;
+        }
+        case 'typeG': { // MULTIBAND
+          const low = Math.sin(phase) * (1 + driveAmount * 5);
+          const mid = Math.tanh(Math.sin(phase * 2) * (1 + driveAmount * 10));
+          const hi = Math.max(-1, Math.min(1, Math.sin(phase * 4) * (1 + driveAmount * 15)));
+          mix = (low * 0.6 + mid * 0.25 + hi * 0.15) * amp + (low * 0.7) * tailAmp;
+          break;
+        }
+        case 'typeH': { // NEURO
+          const layer1 = Math.tanh(Math.sin(phase) * (1 + driveAmount * 8));
+          const layer2 = Math.tanh(Math.sin(phase * 1.5 + layer1) * driveAmount * 5);
+          mix = layer1 * amp + (layer1 * 0.6 + layer2 * 0.4) * tailAmp * resoAmount;
+          break;
+        }
+        default: mix = (mix * amp) + (mix * tailAmp * 0.7);
+      }
+
+      // ── PURE SUB ──
+      const pureSubPhase = baseFreq * Math.PI * 2 * t;
+      const pureSub = Math.sin(pureSubPhase) * tailAmp * subVol * 1.5;
+
+      let s = mix + pureSub;
+      s = Math.max(-0.99, Math.min(0.99, Math.tanh(s * 1.2)));
+
+      left[i] = s;
+      right[i] = s;
+    }
+  },
+
+  startVisuals() {
+    const wavCanvas = document.getElementById('canvas-wav');
+    const fftCanvas = document.getElementById('canvas-fft');
+    const pitchCanvas = document.getElementById('canvas-pitch');
+
+    const resize = () => {
+      [wavCanvas, fftCanvas, pitchCanvas].forEach(c => {
+        c.width = c.clientWidth * (window.devicePixelRatio || 1);
+        c.height = c.clientHeight * (window.devicePixelRatio || 1);
+      });
+    };
+    resize();
+    window.addEventListener('resize', resize);
+
+    const wavCtx2d = wavCanvas.getContext('2d');
+    const fftCtx2d = fftCanvas.getContext('2d');
+    const pitchCtx = pitchCanvas.getContext('2d');
+
+    const bufLen = this.analyzer.frequencyBinCount;
+    const wavData = new Float32Array(bufLen);
+    const fftData = new Uint8Array(bufLen);
+
+    const draw = () => {
+      this.reqId = requestAnimationFrame(draw);
+      this.wavAnalyzer.getFloatTimeDomainData(wavData);
+      this.analyzer.getByteFrequencyData(fftData);
+
+      // Waveform
+      const ww = wavCanvas.width, wh = wavCanvas.height;
+      wavCtx2d.fillStyle = '#020202';
+      wavCtx2d.fillRect(0, 0, ww, wh);
+      wavCtx2d.beginPath();
+      wavCtx2d.strokeStyle = '#ff3c00';
+      wavCtx2d.lineWidth = 2;
+      for (let i = 0; i < bufLen; i++) {
+        const x = i * (ww / bufLen);
+        const y = (wavData[i] * 0.7 + 0.5) * wh;
+        i === 0 ? wavCtx2d.moveTo(x, y) : wavCtx2d.lineTo(x, y);
+      }
+      wavCtx2d.stroke();
+
+      // Peak
+      let peak = 0;
+      for (let i = 0; i < bufLen; i++) peak = Math.max(peak, Math.abs(wavData[i]));
+      document.getElementById('peak-val').textContent = 'PEAK: ' + (peak > 0 ? (20 * Math.log10(peak)).toFixed(1) + ' dB' : '---');
+
+      // FFT
+      const fw = fftCanvas.width, fh = fftCanvas.height;
+      fftCtx2d.fillStyle = '#020202';
+      fftCtx2d.fillRect(0, 0, fw, fh);
+      const bw = fw / 128;
+      for (let i = 0; i < 128; i++) {
+        const bh = (fftData[i] / 255) * fh;
+        const r = Math.floor(fftData[i] * 1.5);
+        const g = Math.floor(fftData[i] * 0.4);
+        fftCtx2d.fillStyle = `rgb(${Math.min(255, r)},${g},10)`;
+        fftCtx2d.fillRect(i * bw, fh - bh, bw - 1, bh);
+      }
+
+      // Pitch envelope curve
+      const pw = pitchCanvas.width, ph = pitchCanvas.height;
+      pitchCtx.fillStyle = '#020202';
+      pitchCtx.fillRect(0, 0, pw, ph);
+      pitchCtx.beginPath();
+      pitchCtx.strokeStyle = '#ffcc00';
+      pitchCtx.lineWidth = 1.5;
+      const sf = State.startfreq, bf = State.freq, pf = State.pitchfall;
+      for (let i = 0; i < pw; i++) {
+        const t = (i / pw) * 0.6;
+        const f = bf + (sf - bf) * Math.exp(-t * pf);
+        const y = ph - (f / 500) * ph;
+        i === 0 ? pitchCtx.moveTo(i, y) : pitchCtx.lineTo(i, y);
+      }
+      pitchCtx.stroke();
+    };
+    draw();
+  },
+
+  exportWav() {
+    if (!this.buffer) return alert('Play a kick first!');
+    const sampleRate = this.buffer.sampleRate;
+    const data = this.buffer.getChannelData(0);
+    const buf = new ArrayBuffer(44 + data.length * 2);
+    const v = new DataView(buf);
+    const ws = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    ws(0, 'RIFF'); v.setUint32(4, 36 + data.length * 2, true);
+    ws(8, 'WAVE'); ws(12, 'fmt '); v.setUint32(16, 16, true);
+    v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, sampleRate, true); v.setUint32(28, sampleRate * 2, true);
+    v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    ws(36, 'data'); v.setUint32(40, data.length * 2, true);
+    let off = 44;
+    for (let i = 0; i < data.length; i++, off += 2) {
+      const s = Math.max(-1, Math.min(1, data[i]));
+      v.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+    const blob = new Blob([v], { type: 'audio/wav' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `fenelite-${State.type}-${noteNameFromFreq(State.freq)}.wav`;
+    a.click(); URL.revokeObjectURL(url);
+  }
+};
+
+// ── SEQUENCER ────────────────────────────────────────────────
+function startSequencer() {
+  stopSequencer();
+  const stepDuration = 60 / State.bpm / 4; // 16th notes
+  let step = 0;
+  seqInterval = setInterval(() => {
+    currentStep = step;
+    updateSeqUI(step);
+    if (State.seqRunning && kickPattern[step]) {
+      const humanize = document.getElementById('seq-humanize-toggle').classList.contains('on') ? (Math.random() - 0.5) * 0.008 : 0;
+      setTimeout(() => AudioEngine.playKick(accentPattern[step]), humanize * 1000);
+    }
+    step = (step + 1) % seqSteps;
+  }, stepDuration * 1000);
+}
+function stopSequencer() {
+  if (seqInterval) clearInterval(seqInterval);
+  seqInterval = null;
+  currentStep = -1;
+  updateSeqUI(-1);
+}
+function updateSeqUI(step) {
+  document.querySelectorAll('.seq-step[data-track="kick"]').forEach((el, i) => {
+    el.classList.toggle('current', i === step);
+  });
+}
+
+// ── BUILD STEP SEQUENCER UI ──────────────────────────────────
+function buildSeqGrid() {
+  const steps = parseInt(document.getElementById('seq-steps').value);
+  const kickGrid = document.getElementById('seq-grid-kick');
+  const accentGrid = document.getElementById('seq-grid-accent');
+  kickGrid.style.gridTemplateColumns = `repeat(${steps},1fr)`;
+  accentGrid.style.gridTemplateColumns = `repeat(${steps},1fr)`;
+  kickGrid.innerHTML = '';
+  accentGrid.innerHTML = '';
+
+  for (let i = 0; i < steps; i++) {
+    // Kick step
+    const k = document.createElement('div');
+    k.className = 'seq-step' + (kickPattern[i] ? ' on' : '') + (accentPattern[i] && kickPattern[i] ? ' accent-step' : '');
+    k.dataset.track = 'kick';
+    k.title = 'Step ' + (i + 1) + ' — Right-click for accent';
+    k.addEventListener('click', () => {
+      kickPattern[i] = !kickPattern[i];
+      k.classList.toggle('on', kickPattern[i]);
+    });
+    k.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      accentPattern[i] = !accentPattern[i];
+      k.classList.toggle('accent-step', accentPattern[i] && kickPattern[i]);
+    });
+    kickGrid.appendChild(k);
+
+    // Accent step
+    const a = document.createElement('div');
+    a.className = 'seq-step' + (accentPattern[i] ? ' on' : '');
+    a.style.height = '14px';
+    a.style.backgroundColor = accentPattern[i] ? 'var(--accent3)' : '';
+    a.addEventListener('click', () => {
+      accentPattern[i] = !accentPattern[i];
+      a.classList.toggle('on', accentPattern[i]);
+      a.style.backgroundColor = accentPattern[i] ? 'var(--accent3)' : '';
+    });
+    accentGrid.appendChild(a);
+  }
+}
+
+// ── BUILD PIANO KEYBOARD ─────────────────────────────────────
+function buildPiano() {
+  const piano = document.getElementById('piano-keyboard');
+  piano.innerHTML = '';
+  // C2 to C4
+  const startMidi = 36;
+  const endMidi = 60;
+  const noteNames = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  for (let midi = startMidi; midi <= endMidi; midi++) {
+    const noteName = noteNames[midi % 12];
+    const isBlack = noteName.includes('#');
+    const key = document.createElement('div');
+    key.className = isBlack ? 'black-key' : 'white-key';
+    key.title = noteName + Math.floor(midi / 12 - 1);
+    key.addEventListener('click', () => {
+      const f = freqFromMidi(midi);
+      State.freq = parseFloat(f.toFixed(1));
+      document.getElementById('param-freq').value = State.freq;
+      updateFreqDisplay();
+      AudioEngine.playKick();
+    });
+    piano.appendChild(key);
+  }
+}
+
+function updateFreqDisplay() {
+  const freq = State.freq;
+  const note = noteNameFromFreq(freq);
+  document.getElementById('note-display').textContent = note;
+  document.getElementById('freq-display').textContent = freq.toFixed(1) + ' Hz';
+  document.getElementById('val-freq').textContent = note;
+  document.getElementById('info-key').textContent = note;
+  document.getElementById('current-algo-label').textContent = State.type.replace('type', 'TYPE ');
+}
+
+// ── PRESETS ──────────────────────────────────────────────────
+const PRESETS = [
+  { name: 'Classic', tag: 'HS', type: 'typeA', wave: 'sine', drive: 82, punch: 90, decay: 580, reso: 70, sub: 80, freq: 43.6, click: 55, noise: 5, startfreq: 150, pitchfall: 50 },
+  { name: 'Brutal', tag: 'RAW', type: 'typeA', wave: 'sine', drive: 95, punch: 95, decay: 450, reso: 80, sub: 60, freq: 41.2, click: 70, noise: 20, startfreq: 200, pitchfall: 60 },
+  { name: 'Euphoric', tag: 'EU', type: 'typeB', wave: 'sine', drive: 70, punch: 80, decay: 700, reso: 55, sub: 90, freq: 46.2, click: 40, noise: 3, startfreq: 120, pitchfall: 40 },
+  { name: 'Thump', tag: 'TK', type: 'typeA', wave: 'sine', drive: 88, punch: 85, decay: 380, reso: 75, sub: 65, freq: 48.9, click: 65, noise: 10, startfreq: 180, pitchfall: 70 },
+  { name: 'Deep', tag: 'SUB', type: 'typeB', wave: 'sine', drive: 60, punch: 75, decay: 900, reso: 40, sub: 95, freq: 36.7, click: 30, noise: 0, startfreq: 100, pitchfall: 30 },
+  { name: 'Neuro', tag: 'NF', type: 'typeH', wave: 'sawtooth', drive: 80, punch: 70, decay: 600, reso: 90, sub: 70, freq: 55.0, click: 45, noise: 15, startfreq: 160, pitchfall: 55 },
+  { name: 'FM Growl', tag: 'FM', type: 'typeF', wave: 'sine', drive: 75, punch: 80, decay: 650, reso: 60, sub: 75, freq: 43.6, click: 50, noise: 8, startfreq: 130, pitchfall: 45 },
+  { name: 'Bitcrushed', tag: 'BIT', type: 'typeE', wave: 'square', drive: 85, punch: 85, decay: 500, reso: 65, sub: 55, freq: 43.6, click: 60, noise: 30, startfreq: 170, pitchfall: 65 },
+  { name: 'Reverse Wump', tag: 'REV', type: 'typeD', wave: 'sine', drive: 78, punch: 88, decay: 800, reso: 85, sub: 85, freq: 41.2, click: 35, noise: 5, startfreq: 130, pitchfall: 35 },
+  { name: 'Wavefolder Krush', tag: 'WV', type: 'typeC', wave: 'sine', drive: 90, punch: 85, decay: 520, reso: 75, sub: 65, freq: 43.6, click: 60, noise: 12, startfreq: 160, pitchfall: 55 },
+  { name: 'Multiband Giant', tag: 'MB', type: 'typeG', wave: 'sine', drive: 80, punch: 90, decay: 620, reso: 70, sub: 80, freq: 43.6, click: 55, noise: 8, startfreq: 145, pitchfall: 48 },
+  { name: 'Supersaw Drop', tag: 'SS', type: 'typeA', wave: 'supersaw', drive: 75, punch: 85, decay: 650, reso: 65, sub: 75, freq: 43.6, click: 50, noise: 5, startfreq: 140, pitchfall: 45 },
+  { name: 'Dark', tag: 'TECH', type: 'typeA', wave: 'sine', drive: 92, punch: 88, decay: 420, reso: 78, sub: 58, freq: 36.7, click: 68, noise: 18, startfreq: 210, pitchfall: 75 },
+  { name: 'Industrial', tag: 'IND', type: 'typeE', wave: 'sine', drive: 98, punch: 95, decay: 350, reso: 85, sub: 50, freq: 43.6, click: 80, noise: 35, startfreq: 250, pitchfall: 90 },
+  { name: 'Tubby Sub', tag: 'TUB', type: 'typeB', wave: 'sine', drive: 65, punch: 72, decay: 850, reso: 45, sub: 92, freq: 38.9, click: 35, noise: 2, startfreq: 110, pitchfall: 28 },
+];
+
+let activePresetIdx = 0;
+
+function buildPresetList() {
+  const list = document.getElementById('preset-list');
+  list.innerHTML = '';
+  PRESETS.forEach((p, i) => {
+    const item = document.createElement('div');
+    item.className = 'preset-item' + (i === activePresetIdx ? ' active' : '');
+    item.innerHTML = `<span>${p.name}</span><span class="tag">${p.tag}</span>`;
+    item.addEventListener('click', () => loadPreset(i));
+    list.appendChild(item);
+  });
+}
+
+function loadPreset(idx) {
+  activePresetIdx = idx;
+  const p = PRESETS[idx];
+  Object.assign(State, {
+    type: p.type, wave: p.wave, drive: p.drive, punch: p.punch,
+    decay: p.decay, reso: p.reso, sub: p.sub, freq: p.freq,
+    click: p.click, noise: p.noise, startfreq: p.startfreq, pitchfall: p.pitchfall
+  });
+
+  // Update UI
+  syncAllUI();
+  buildPresetList();
+  AudioEngine.playKick();
+}
+
+function syncAllUI() {
+  // Algorithm buttons
+  document.querySelectorAll('.algo-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.type === State.type);
+  });
+  document.getElementById('current-algo-label').textContent = State.type.replace('type', 'TYPE ');
+  document.getElementById('info-algo').textContent = document.querySelector('.algo-btn.active .name')?.textContent?.replace('TYPE ???? — ', '') || State.type;
+
+  // Wave buttons
+  document.querySelectorAll('.wave-btn:not([data-lfo])').forEach(b => {
+    b.classList.toggle('active', b.dataset.wave === State.wave);
+  });
+  document.getElementById('info-wave').textContent = State.wave.toUpperCase();
+
+  // Sliders
+  const setSlider = (id, val, display) => {
+    const el = document.getElementById(`param-${id}`);
+    if (el) el.value = val;
+    const vEl = document.getElementById(`val-${id}`);
+    if (vEl) vEl.textContent = display;
+  };
+  setSlider('decay', State.decay, State.decay + 'ms');
+  setSlider('startfreq', State.startfreq, State.startfreq + 'Hz');
+  setSlider('pitchfall', State.pitchfall, State.pitchfall);
+  setSlider('freq', State.freq, noteNameFromFreq(State.freq));
+  document.getElementById('info-decay').textContent = State.decay + 'ms';
+
+  // Knobs
+  const knobParams = ['drive','punch','sub','reso','click','noise','ffreq','freso','fenv','fdecay'];
+  knobParams.forEach(param => {
+    const v = State[param] ?? State[param];
+    updateKnob(param, v !== undefined ? v : 50);
+  });
+
+  updateFreqDisplay();
+}
+
+// ── KNOB SYSTEM ──────────────────────────────────────────────
+function polarToCartesian(cx, cy, r, angle) {
+  return { x: cx + r * Math.sin(angle), y: cy - r * Math.cos(angle) };
+}
+function describeArc(cx, cy, r, startAng, endAng) {
+  const s = polarToCartesian(cx, cy, r, startAng);
+  const e = polarToCartesian(cx, cy, r, endAng);
+  const large = endAng - startAng > Math.PI ? 1 : 0;
+  return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 1 ${e.x} ${e.y}`;
+}
+
+function updateKnob(param, val) {
+  const svg = document.querySelector(`svg[data-param="${param}"]`);
+  if (!svg) return;
+  const min = parseFloat(svg.dataset.min);
+  const max = parseFloat(svg.dataset.max);
+  const t = (val - min) / (max - min);
+  const startAngle = -2.35;
+  const endAngle = 2.35;
+  const currentAngle = startAngle + t * (endAngle - startAngle);
+
+  const arc = document.getElementById(`knob-arc-${param}`);
+  const line = document.getElementById(`knob-line-${param}`);
+  const valEl = document.getElementById(`knob-val-${param}`);
+
+  if (arc) arc.setAttribute('d', describeArc(27, 27, 18, startAngle, currentAngle));
+  if (line) {
+    const x2 = 27 + 17 * Math.sin(currentAngle);
+    const y2 = 27 - 17 * Math.cos(currentAngle);
+    line.setAttribute('x1', '27'); line.setAttribute('y1', '27');
+    line.setAttribute('x2', x2.toFixed(1)); line.setAttribute('y2', y2.toFixed(1));
+  }
+  if (valEl) {
+    const unit = ['ffreq','freso','fenv','fdecay'].includes(param) ? '%' : '%';
+    valEl.textContent = Math.round(val) + '%';
+  }
+}
+
+function initKnobs() {
+  document.querySelectorAll('.knob-svg').forEach(svg => {
+    const param = svg.dataset.param;
+    const min = parseFloat(svg.dataset.min);
+    const max = parseFloat(svg.dataset.max);
+    let val = parseFloat(svg.dataset.val);
+    updateKnob(param, val);
+
+    let startY, startVal;
+    const onDown = e => {
+      e.preventDefault();
+      startY = e.clientY ?? e.touches?.[0]?.clientY;
+      startVal = val;
+      const onMove = e2 => {
+        const y = e2.clientY ?? e2.touches?.[0]?.clientY;
+        const delta = (startY - y) * (max - min) / 150;
+        val = Math.max(min, Math.min(max, startVal + delta));
+        State[param] = val;
+        updateKnob(param, val);
+      };
+      const onUp = () => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onUp);
+        AudioEngine.playKick();
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+      document.addEventListener('touchmove', onMove);
+      document.addEventListener('touchend', onUp);
+    };
+    svg.addEventListener('mousedown', onDown);
+    svg.addEventListener('touchstart', onDown, { passive: false });
+  });
+}
+
+// ── TABS ─────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const tabId = tab.dataset.tab;
+    ['synth','seq','env','fx','mod','tune'].forEach(id => {
+      const el = document.getElementById(`tab-${id}`);
+      if (el) el.style.display = id === tabId ? '' : 'none';
+    });
+  });
+});
+
+// ── TOGGLES ──────────────────────────────────────────────────
+document.querySelectorAll('.toggle').forEach(tog => {
+  tog.addEventListener('click', () => {
+    tog.classList.toggle('on');
+    const key = tog.dataset.key;
+    if (key) State[key] = tog.classList.contains('on');
+  });
+});
+
+// ── SLIDERS BINDING ──────────────────────────────────────────
+const sliderBindings = [
+  { id: 'decay',     key: 'decay',      fmt: v => v + 'ms' },
+  { id: 'startfreq', key: 'startfreq',  fmt: v => v + 'Hz' },
+  { id: 'pitchfall', key: 'pitchfall',  fmt: v => v },
+  { id: 'phase',     key: 'phase',      fmt: v => v + '°' },
+  { id: 'detune',    key: 'detune',     fmt: v => v + '¢' },
+  { id: 'freq',      key: 'freq',       fmt: v => noteNameFromFreq(parseFloat(v)) },
+];
+sliderBindings.forEach(({ id, key, fmt }) => {
+  const el = document.getElementById(`param-${id}`);
+  const vEl = document.getElementById(`val-${id}`);
+  if (!el) return;
+  el.addEventListener('input', e => {
+    const v = parseFloat(e.target.value);
+    State[key] = v;
+    if (vEl) vEl.textContent = fmt(v);
+    if (id === 'freq') updateFreqDisplay();
+    if (id === 'decay') document.getElementById('info-decay').textContent = v + 'ms';
+  });
+  el.addEventListener('change', () => AudioEngine.playKick());
+});
+
+// Fine tune / transpose / pitch bend
+['fine-tune','pitch-bend','transpose'].forEach(id => {
+  const el = document.getElementById(id);
+  const vEl = document.getElementById(id + '-val');
+  if (!el) return;
+  el.addEventListener('input', e => {
+    const v = parseFloat(e.target.value);
+    const key = id.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+    State[key] = v;
+    const suffix = id === 'fine-tune' ? '¢' : 'st';
+    if (vEl) vEl.textContent = v + suffix;
+    updateFreqDisplay();
+  });
+  el.addEventListener('change', () => AudioEngine.playKick());
+});
+
+// Env sliders
+['attack','hold','decay','curve','sustain'].forEach(id => {
+  const el = document.getElementById(`env-${id}`);
+  const vEl = document.getElementById(`env-${id}-val`);
+  if (!el) return;
+  el.addEventListener('input', e => {
+    const v = parseFloat(e.target.value);
+    const display = id === 'curve' ? (v < -20 ? 'EXP' : v > 20 ? 'LOG' : 'LIN') :
+      id === 'sustain' ? v + '%' : v + 'ms';
+    if (vEl) vEl.textContent = display;
+    if (id === 'decay') { State.decay = v; document.getElementById('param-decay').value = v; }
+  });
+});
+
+// FX limiter display
+document.getElementById('fx-lim-ceiling')?.addEventListener('input', e => {
+  document.getElementById('fx-lim-val').textContent = parseFloat(e.target.value).toFixed(1) + ' dB';
+});
+
+// LFO sliders
+['lfo1','lfo2'].forEach(lfo => {
+  ['rate','depth'].forEach(param => {
+    const el = document.getElementById(`${lfo}-${param}`);
+    const vEl = document.getElementById(`${lfo}-${param}-val`);
+    if (!el) return;
+    el.addEventListener('input', e => {
+      const v = parseFloat(e.target.value);
+      State[lfo][param] = v;
+      const unit = param === 'rate' ? 'Hz' : '%';
+      if (vEl) vEl.textContent = v.toFixed(1) + unit;
+    });
+  });
+});
+
+// LFO wave buttons
+document.querySelectorAll('.wave-btn[data-lfo]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const lfoId = 'lfo' + btn.dataset.lfo;
+    const container = document.getElementById(`${lfoId}-wave-btns`);
+    container.querySelectorAll('.wave-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    State[lfoId].wave = btn.dataset.wave;
+  });
+});
+
+// ── ALGORITHM BUTTONS ────────────────────────────────────────
+const algoLabels = {
+  typeA: 'HARD CLIP', typeB: 'WARM TUBE', typeC: 'WAVEFOLD',
+  typeD: 'REV. SWELL', typeE: 'BITCRUSH', typeF: 'FM DISTORT',
+  typeG: 'MULTIBAND', typeH: 'NEURO'
+};
+document.querySelectorAll('.algo-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.algo-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    State.type = btn.dataset.type;
+    document.getElementById('current-algo-label').textContent = algoLabels[State.type] || State.type;
+    document.getElementById('info-algo').textContent = algoLabels[State.type] || State.type;
+    AudioEngine.playKick();
+  });
+});
+
+// ── OSCILLATOR WAVE BUTTONS ──────────────────────────────────
+document.querySelectorAll('#osc-wave-btns .wave-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#osc-wave-btns .wave-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    State.wave = btn.dataset.wave;
+    document.getElementById('info-wave').textContent = State.wave.toUpperCase();
+    AudioEngine.playKick();
+  });
+});
+
+// ── FILTER TYPE ──────────────────────────────────────────────
+document.getElementById('filter-type')?.addEventListener('change', e => {
+  State.filterType = e.target.value;
+  AudioEngine.playKick();
+});
+
+// ── TRANSPORT CONTROLS ───────────────────────────────────────
+document.getElementById('btn-play').addEventListener('click', () => {
+  AudioEngine.playKick();
+  startSequencer();
+});
+document.getElementById('btn-stop').addEventListener('click', () => {
+  stopSequencer();
+});
+document.getElementById('btn-loop').addEventListener('click', e => {
+  State.loopOn = !State.loopOn;
+  e.target.classList.toggle('active', State.loopOn);
+});
+
+// ── BPM ──────────────────────────────────────────────────────
+let bpmDragY = null, bpmDragVal = 142;
+const bpmDisplay = document.getElementById('bpm-display');
+bpmDisplay.addEventListener('mousedown', e => {
+  bpmDragY = e.clientY; bpmDragVal = State.bpm;
+  const onMove = e2 => {
+    const delta = Math.round((bpmDragY - e2.clientY) / 2);
+    State.bpm = Math.max(60, Math.min(250, bpmDragVal + delta));
+    bpmDisplay.textContent = State.bpm;
+    document.getElementById('info-bpm').textContent = State.bpm;
+    if (seqInterval) startSequencer();
+  };
+  const onUp = () => {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+  };
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+});
+
+// TAP TEMPO
+document.getElementById('btn-tap').addEventListener('click', () => {
+  const now = Date.now();
+  tapTimes.push(now);
+  if (tapTimes.length > 8) tapTimes.shift();
+  if (tapTimes.length >= 2) {
+    const intervals = tapTimes.slice(1).map((t, i) => t - tapTimes[i]);
+    const avg = intervals.reduce((a, b) => a + b) / intervals.length;
+    State.bpm = Math.round(60000 / avg);
+    bpmDisplay.textContent = State.bpm;
+    document.getElementById('info-bpm').textContent = State.bpm;
+    if (seqInterval) startSequencer();
+  }
+});
+
+// Swing
+document.getElementById('swing-slider').addEventListener('input', e => {
+  State.swing = parseInt(e.target.value);
+  document.getElementById('swing-val').textContent = State.swing + '%';
+});
+
+// Master vol
+document.getElementById('master-vol').addEventListener('input', e => {
+  State.masterVol = parseInt(e.target.value) / 100;
+});
+
+// ── SEQUENCER CONTROLS ───────────────────────────────────────
+document.getElementById('seq-steps')?.addEventListener('change', () => buildSeqGrid());
+document.getElementById('seq-clear')?.addEventListener('click', () => {
+  kickPattern.fill(false);
+  accentPattern.fill(false);
+  buildSeqGrid();
+});
+document.getElementById('seq-fill')?.addEventListener('click', () => {
+  kickPattern.fill(false);
+  [0, 4, 8, 12].forEach(i => { if (i < seqSteps) kickPattern[i] = true; });
+  buildSeqGrid();
+});
+document.getElementById('seq-fill-tekno')?.addEventListener('click', () => {
+  kickPattern.fill(false);
+  [0, 2, 5, 8, 10, 13].forEach(i => { if (i < seqSteps) kickPattern[i] = true; });
+  buildSeqGrid();
+});
+document.getElementById('seq-random-pattern')?.addEventListener('click', () => {
+  for (let i = 0; i < seqSteps; i++) kickPattern[i] = Math.random() > 0.65;
+  buildSeqGrid();
+});
+
+// Seq running toggle
+document.getElementById('seq-running-toggle')?.addEventListener('click', () => {
+  State.seqRunning = document.getElementById('seq-running-toggle').classList.contains('on');
+});
+
+// ── RANDOM ───────────────────────────────────────────────────
+document.getElementById('btn-random').addEventListener('click', () => {
+  const types = ['typeA','typeB','typeC','typeD','typeE','typeF','typeG','typeH'];
+  const waves = ['sine','sine','sine','triangle','sawtooth','square','supersaw'];
+  State.type = types[Math.floor(Math.random() * types.length)];
+  State.wave = waves[Math.floor(Math.random() * waves.length)];
+  State.drive = 60 + Math.random() * 40;
+  State.punch = 60 + Math.random() * 40;
+  State.decay = 300 + Math.random() * 1200;
+  State.reso = 30 + Math.random() * 70;
+  State.sub = 50 + Math.random() * 50;
+  State.freq = 36.7 + Math.random() * 20;
+  State.click = 20 + Math.random() * 80;
+  State.noise = Math.random() * 30;
+  State.startfreq = 80 + Math.random() * 200;
+  State.pitchfall = 20 + Math.random() * 80;
+  syncAllUI();
+  AudioEngine.playKick();
+});
+
+// ── EXPORT & SAVE ────────────────────────────────────────────
+document.getElementById('btn-export').addEventListener('click', () => AudioEngine.exportWav());
+document.getElementById('btn-save-preset')?.addEventListener('click', () => {
+  const name = prompt('Preset name:', 'My Kick ' + (PRESETS.length + 1));
+  if (!name) return;
+  PRESETS.push({
+    name, tag: 'USR',
+    type: State.type, wave: State.wave,
+    drive: State.drive, punch: State.punch, decay: State.decay,
+    reso: State.reso, sub: State.sub, freq: State.freq,
+    click: State.click, noise: State.noise,
+    startfreq: State.startfreq, pitchfall: State.pitchfall
+  });
+  buildPresetList();
+  loadPreset(PRESETS.length - 1);
+});
+
+// Preset search
+document.getElementById('preset-search')?.addEventListener('input', e => {
+  const q = e.target.value.toLowerCase();
+  document.querySelectorAll('.preset-item').forEach((el, i) => {
+    el.style.display = PRESETS[i]?.name.toLowerCase().includes(q) ? '' : 'none';
+  });
+});
+
+// Preset navigation
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.code === 'Space') { e.preventDefault(); AudioEngine.playKick(); }
+  if (e.code === 'KeyR') { document.getElementById('btn-random').click(); }
+  if (e.code === 'ArrowLeft') { loadPreset(Math.max(0, activePresetIdx - 1)); }
+  if (e.code === 'ArrowRight') { loadPreset(Math.min(PRESETS.length - 1, activePresetIdx + 1)); }
+  if (e.code === 'KeyS') { stopSequencer(); }
+});
+
+// Add mod row
+document.getElementById('add-mod-row')?.addEventListener('click', () => {
+  const row = document.createElement('div');
+  row.className = 'mod-matrix-row';
+  row.innerHTML = `
+    <select><option>LFO 1</option><option>LFO 2</option><option>Velocity</option></select>
+    <select><option>Drive</option><option>Filter Cutoff</option><option>Pitch</option><option>Sub Amount</option></select>
+    <input type="range" min="0" max="100" value="20" title="Amount">
+    <span style="font-family:'Space Mono',monospace;font-size:0.68rem;color:var(--muted)">20%</span>
+  `;
+  document.getElementById('mod-matrix').appendChild(row);
+  row.querySelector('input').addEventListener('input', e => {
+    row.querySelector('span').textContent = e.target.value + '%';
+  });
+});
+
+// ── INIT ─────────────────────────────────────────────────────
+buildPresetList();
+buildSeqGrid();
+buildPiano();
+initKnobs();
+syncAllUI();
+
+// Start sequencer on load (silent until play pressed)
+// Auto-init visuals
+window.addEventListener('click', () => { AudioEngine.init(); }, { once: true });
+
+// Draw envelope preview
+function drawEnvCanvas() {
+  const canvas = document.getElementById('env-canvas');
+  if (!canvas) return;
+  canvas.width = canvas.clientWidth || 600;
+  canvas.height = canvas.clientHeight || 200;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.fillStyle = '#020202';
+  ctx.fillRect(0, 0, w, h);
+
+  const att = parseFloat(document.getElementById('env-attack')?.value || 5);
+  const dec = parseFloat(document.getElementById('env-decay')?.value || 600);
+  const sus = parseFloat(document.getElementById('env-sustain')?.value || 0) / 100;
+  const total = att + dec;
+
+  ctx.beginPath();
+  ctx.strokeStyle = '#ff3c00';
+  ctx.lineWidth = 2;
+
+  // Attack
+  const ax = (att / total) * w * 0.6;
+  ctx.moveTo(10, h - 10);
+  ctx.lineTo(10 + ax, 10);
+
+  // Decay to sustain
+  ctx.lineTo(10 + ax + (dec / total) * w * 0.6, h - 10 - sus * (h - 20));
+
+  // Sustain line
+  ctx.lineTo(10 + w * 0.85, h - 10 - sus * (h - 20));
+
+  // Release
+  ctx.lineTo(w - 10, h - 10);
+
+  ctx.stroke();
+
+  // Draw grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 5; i++) {
+    const y = 10 + (i / 4) * (h - 20);
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+  }
+}
+
+['env-attack','env-decay','env-sustain','env-curve','env-hold'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', drawEnvCanvas);
+});
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+  if (t.dataset.tab === 'env') setTimeout(drawEnvCanvas, 50);
+}));
+setTimeout(drawEnvCanvas, 100);
+</script>
+</body>
+</html>
